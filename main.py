@@ -35,19 +35,18 @@ for i in range(1):
     co = signal.correlate(xarr, np.flip(xarr), mode="same")
 
     fig, axs = plt.subplots(2, sharex=True)
-    axs[1].plot(xarr)
-    axs[1].plot(np.flip(xarr))
-    img[math.floor(c[1]), math.floor(c[0]-r):math.ceil(c[0]+r)] = 255
-    img[math.floor(c[1]-r):math.ceil(c[1]+r), math.floor(c[0])] = 0
-    axs[0].imshow(img[math.floor(c[1]-r):math.ceil(c[1]+r), math.floor(c[0]-r):math.ceil(c[0]+r)])    
-    asp = np.diff(axs[1].get_xlim())[0] / np.diff(axs[1].get_ylim())[0]
-    axs[1].set_aspect(asp)
+    axs[0].plot(xarr)
+    axs[0].plot(np.flip(xarr))
+    axs[0].grid()
+    axs[1].plot(co)
+    axs[1].scatter([len(co)/2],[0],marker="x")
+    axs[1].grid()
     plt.show()
 
-    l = math.floor(len(co)/2)
-    plt.plot(co[l-15:l+16])
-    plt.grid()
+    img[math.floor(c[1]), math.floor(c[0]-r):math.ceil(c[0]+r)] = 255
+    img[math.floor(c[1]-r):math.ceil(c[1]+r), math.floor(c[0])] = 0
+    plt.imshow(img[math.floor(c[1]-r):math.ceil(c[1]+r), math.floor(c[0]-r):math.ceil(c[0]+r)])
     plt.show()
-    
+
 Core.stop_sequence_acquisition()
 print("Duration: ", time.time() - start)
