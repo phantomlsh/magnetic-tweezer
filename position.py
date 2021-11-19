@@ -1,12 +1,9 @@
 import cv2 as cv
 import numpy as np
-from scipy import signal
-from math import floor, atan, sqrt
+from math import floor, atan, sqrt, pi as π
+import matplotlib.pyplot as plt
+from utils import NormalizeArray, Gaussian
 import r2xy
-
-# Normalize to [-1, 1]
-def NormalizeArray(array):
-	return array/(np.max(array)/2) - 1
 
 def HoughCircles(image, minRadius, maxRadius):
 	circles = cv.HoughCircles(
@@ -23,15 +20,18 @@ def HoughCircles(image, minRadius, maxRadius):
 	return circles[0]
 
 # shift from the center
-def SymmetryCenter(array):
+def SymmetryCenter(array, d):
 	l = len(array)
-	c = floor(l/2)
-	r = floor(l/4)
+	c = l/2
 	normalized = NormalizeArray(array)
-	co = signal.correlate(normalized, np.flip(normalized), mode="same")
-	maxi = np.argmax(co[c-r:c+r])+c-r
-	p = np.polyfit(range(maxi-3, maxi+4, 1), co[maxi-3:maxi+4], 2)
-	return -p[1]/(4*p[0])-c/2
+	freq = np.fft.rfftfreq(l)
+	fft = np.fft.rfft(normalized) * np.exp(2j*π*d*freq)
+	co = np.fft.irfft(fft * fft) * Gaussian(np.arange(l), c, c/4)
+	#from scipy import signal
+	#co = signal.correlate(normalized, np.flip(normalized), mode="same")
+	maxi = np.argmax(co)
+	p = np.polynomial.polynomial.polyfit(range(maxi-2, maxi+3, 1), co[maxi-2:maxi+3], 2)
+	return -p[1]/(4*p[2])-c/2
 
 def SearchNearby(img, cx, cy, searchRadius, minRadius, maxRadius):
 	x = floor(cx)
