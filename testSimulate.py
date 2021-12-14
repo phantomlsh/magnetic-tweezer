@@ -1,43 +1,32 @@
 import numpy as np
+from scipy import interpolate
+import time
+import QI
+import simulate
 import matplotlib.pyplot as plt
-from math import sqrt, cos, floor, pi as π
-from utils import NormalizeArray
+import utils
 from numba import jit
 
-import position
-
-@jit(nopython=True)
-def Generate(X, Y, Z, λ, Is):
-	L = Is.shape[0]
-	for x in range(L):
-		for y in range(L):
-			r = sqrt((x-X)**2 + (y-Y)**2 + Z**2)
-			n = (r-Z)/λ
-			ϕ = 2*π*(n - floor(n) - 0.5)
-			Is[y][x] = cos(ϕ/2) * Z**2 / (r**4)
-
-Is = np.ndarray((100, 100))
-
+img = np.ndarray((100, 100))
 x = 50
 y = 50
-r = 40
-δs = np.arange(0, 5, 0.01)
-Δ1s = []
-Δ2s = []
-Δ3s = []
 
-for δ in δs:
-	Generate(50+δ, 50, 50, 4, Is)
-	Δ1 = position.SymmetryCenter(np.mean(Is[y-2:y+3, x-r:x+r], axis=0), 0)
-	d = Δ1
-	Δ2 = position.SymmetryCenter(np.mean(Is[y-2:y+3, x-r:x+r], axis=0), d) + d
-	d = Δ2
-	Δ3 = position.SymmetryCenter(np.mean(Is[y-2:y+3, x-r:x+r], axis=0), d) + d
-	Δ1s.append(Δ1-δ)
-	Δ2s.append(Δ2-δ)
-	Δ3s.append(Δ3-δ)
+N = 80
+Nθ = 80
+Nr = 80
+xs, ys = QI.SamplePoints(N, Nθ, Nr)
+simulate.Generate(50+0.5, 50, 50, 4, img)
 
-plt.plot(δs, Δ1s)
-plt.plot(δs, Δ2s)
-plt.plot(δs, Δ3s)
+@jit(nopython=True, fastmath=True, cache=True)
+def eval(f):
+	for i in range(1000):
+		Is = np.array([float(f(*p)) for p in zip(x+xs, y+ys)])
+	return Is
+
+start = time.time()
+f = interpolate.interp2d(np.arange(0, 100), np.arange(0, 100), img)
+Is = eval(f)
+print(time.time() - start)
+
+plt.imshow(Is.reshape((80, 80)), cmap="gray")
 plt.show()

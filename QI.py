@@ -14,7 +14,7 @@ def Quarters(Is, Nθ):
 	q = floor(Nθ/4)
 	return np.sum(Is[0:q], axis=0), np.sum(Is[q:2*q], axis=0), np.sum(Is[2*q:3*q], axis=0), np.sum(Is[3*q:4*q], axis=0)
 
-def XY(Is, dx, dy, Nθ):
+def XY(Is, Nθ):
 	Itr, Itl, Ibl, Ibr = Quarters(Is, Nθ)
 	Il = (Itl + Ibl) / 2
 	Ir = (Itr + Ibr) / 2
@@ -22,4 +22,4 @@ def XY(Is, dx, dy, Nθ):
 	Ib = (Ibl + Ibr) / 2
 	Ix = np.append(np.flip(Il), Ir)
 	Iy = np.append(np.flip(Ib), It)
-	return SymmetryCenter(Ix) + dx, SymmetryCenter(Iy) + dy
+	return SymmetryCenter(Ix), SymmetryCenter(Iy)
