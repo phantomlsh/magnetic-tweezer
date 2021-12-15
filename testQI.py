@@ -2,7 +2,6 @@ import numpy as np
 import time
 import QI
 import simulate
-import position
 import matplotlib.pyplot as plt
 from utils import BilinearInterpolate, NormalizeArray
 
@@ -16,7 +15,7 @@ Nr = 80
 xs, ys = QI.SamplePoints(N, Nθ, Nr)
 
 δs = np.arange(0, 5, 0.01)
-Δs = [[], [], [], []]
+Δs = []
 
 start = time.time()
 for δ in δs:
@@ -30,9 +29,11 @@ for δ in δs:
 		Δx, Δy = QI.XY(Is, Nθ)
 		dx += Δx * 0.8
 		dy += Δy * 0.8
-		Δs[i].append(dx - δ)
+	
+	Δs.append(dx - δ)
 
 print("--- %s seconds ---" % (time.time() - start))
+print("mean =", np.mean(Δs), "standard deviation =", np.std(Δs))
 
-for i in range(3):
-  print(np.std(Δs[i]))
+plt.plot(QI.Profile(Is))
+plt.show()
