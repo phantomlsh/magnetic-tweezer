@@ -1,6 +1,5 @@
 import numpy as np
 from math import pi
-from numba import jit
 
 # Normalize to [-1, 1]
 def NormalizeArray(array):
