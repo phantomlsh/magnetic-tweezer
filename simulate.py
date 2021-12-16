@@ -1,6 +1,8 @@
 from math import sqrt, cos, floor, pi as π
 import random
+from numba import jit
 
+@jit(nopython=True)
 def Generate(X, Y, Z, λ, img):
   L = img.shape[0]
   for x in range(L):
@@ -8,4 +10,4 @@ def Generate(X, Y, Z, λ, img):
       r = sqrt((x-X)**2 + (y-Y)**2 + Z**2)
       n = (r-Z)/λ
       ϕ = 2*π*(n - floor(n) - 0.5)
-      img[y][x] = cos(ϕ/2) * Z**2 / (r**4)
+      img[y][x] = cos(ϕ/2) * Z**2 / (r**4) * random.uniform(1, 1.1)

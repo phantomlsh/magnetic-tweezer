@@ -1,6 +1,6 @@
 import numpy as np
 from math import floor, pi as π
-from utils import BilinearInterpolate, SymmetryCenter
+from utils import BilinearInterpolate, SymmetryCenter, NormalizeArray
 
 # Nθ should be a multiple of 4
 def SamplePoints(N, Nθ, Nr):
@@ -23,4 +23,4 @@ def XY(Is, Nθ):
 	return SymmetryCenter(Ix), SymmetryCenter(Iy)
 
 def Profile(Is):
-	return np.sum(Is, axis=0)
+	return NormalizeArray(np.sum(Is, axis=0))

@@ -3,7 +3,7 @@ import time
 import QI
 import simulate
 import matplotlib.pyplot as plt
-from utils import BilinearInterpolate, NormalizeArray
+from utils import BilinearInterpolate, Gaussian
 
 img = np.ndarray((100, 100))
 x = 50
@@ -24,16 +24,13 @@ for δ in δs:
 	dy = 0
 	s = []
 	for i in range(3):
-		Is = BilinearInterpolate(img, xs+x+dx, ys+y+dy)
-		Is = Is.reshape((Nθ, Nr))
-		Δx, Δy = QI.XY(Is, Nθ)
-		dx += Δx * 0.8
-		dy += Δy * 0.8
+		I = BilinearInterpolate(img, xs+x+dx, ys+y+dy)
+		I = I.reshape((Nθ, Nr))
+		Δx, Δy = QI.XY(I, Nθ)
+		dx += Δx * 0.8 - 0.0225
+		dy += Δy * 0.8 - 0.0225
 	
 	Δs.append(dx - δ)
 
 print("--- %s seconds ---" % (time.time() - start))
 print("mean =", np.mean(Δs), "standard deviation =", np.std(Δs))
-
-plt.plot(QI.Profile(Is))
-plt.show()

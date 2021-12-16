@@ -13,7 +13,6 @@ def SymmetryCenter(array):
 	l = len(array)
 	c = l/2
 	normalized = NormalizeArray(array)
-	freq = np.fft.rfftfreq(l)
 	fft = np.fft.rfft(normalized)
 	co = np.fft.irfft(fft * fft) * Gaussian(np.arange(l), c, c/4)
 	maxi = np.argmax(co)
