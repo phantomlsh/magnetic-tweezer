@@ -10,4 +10,4 @@ def Generate(X, Y, Z, λ, img):
       r = sqrt((x-X)**2 + (y-Y)**2 + Z**2)
       n = (r-Z)/λ
       ϕ = 2*π*(n - floor(n) - 0.5)
-      img[y][x] = cos(ϕ/2) * Z**2 / (r**4) * random.uniform(1, 1.1)
+      img[y][x] = floor(5e5 * cos(ϕ/2) * Z**2 / (r**4) * random.uniform(1, 1.1))
