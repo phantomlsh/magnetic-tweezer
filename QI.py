@@ -3,8 +3,8 @@ from math import floor, pi as π
 from utils import BilinearInterpolate, SymmetryCenter, NormalizeArray
 
 # Nθ should be a multiple of 4
-def SamplePoints(N, Nθ, Nr):
-	rs = np.tile(np.arange(0, N/2, N/2/Nr), Nθ)
+def SamplePoints(L, Nθ, Nr):
+	rs = np.tile(np.arange(0, L/2, L/2/Nr), Nθ)
 	θs = np.repeat(np.arange(π/Nθ, 2*π, 2*π/Nθ), Nr)
 	return rs * np.cos(θs), rs * np.sin(θs)
 

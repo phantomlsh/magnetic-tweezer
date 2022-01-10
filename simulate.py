@@ -1,8 +1,6 @@
 from math import sqrt, cos, floor, pi as π
 import random
-from numba import jit
 
-@jit(nopython=True)
 def Generate(X, Y, Z, λ, img):
   L = img.shape[0]
   for x in range(L):

@@ -2,7 +2,6 @@ import numpy as np
 import time
 import QI
 import simulate
-import matplotlib.pyplot as plt
 from utils import BilinearInterpolate, NormalizeArray
 
 img = np.ndarray((100, 100))

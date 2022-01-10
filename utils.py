@@ -1,5 +1,6 @@
 import numpy as np
-from math import pi
+import cv2 as cv
+from math import pi, floor
 
 # Normalize to [-1, 1]
 def NormalizeArray(array):
@@ -7,6 +8,12 @@ def NormalizeArray(array):
 
 def Gaussian(x, μ, σ):
 	return np.exp(-np.power(x-μ, 2.) / (2 * np.power(σ, 2.)))
+
+def CropImage(img, x, y, L):
+	xi = floor(x)
+	yi = floor(y)
+	r = floor(L/2)
+	return img[yi-r:yi+r, xi-r:xi+r]
 
 # shift from the center
 def SymmetryCenter(array):
@@ -37,3 +44,9 @@ def BilinearInterpolate(im, x, y):
 	wd = (x-x0) * (y-y0)
 
 	return wa*Ia + wb*Ib + wc*Ic + wd*Id
+
+def HoughCircles(image, minRadius, maxRadius):
+	circles = cv.HoughCircles(image, cv.HOUGH_GRADIENT, 1, 50, param1=50, param2=30, minRadius=minRadius, maxRadius=maxRadius)
+	if (circles is None):
+		return []
+	return circles[0]
