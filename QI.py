@@ -1,6 +1,6 @@
 import numpy as np
 from math import floor, pi as π
-from utils import BilinearInterpolate, SymmetryCenter, NormalizeArray
+from utils import SymmetryCenter, NormalizeArray
 
 # Nθ should be a multiple of 4
 def SamplePoints(L, Nθ, Nr):

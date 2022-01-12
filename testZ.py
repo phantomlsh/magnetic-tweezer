@@ -20,7 +20,9 @@ Rc = [] # real part
 Φc = [] # phase angle
 Ac = [] # amplitude
 
-for δ in np.arange(0, 10, 1):
+δc = np.arange(0, 10, 1)
+
+for δ in δc:
   simulate.Generate(50, 50, 100+δ, 4, img)
   I = BilinearInterpolate(img, xs+x, ys+y)
   I = I.reshape((Nθ, Nr))
@@ -29,8 +31,10 @@ for δ in np.arange(0, 10, 1):
   Φc.append(np.unwrap(np.angle(It)))
   Ac.append(np.abs(It))
 
-for δ in np.arange(0, 3, 0.6):
-  simulate.Generate(50, 50, 100+5+δ, 4, img)
+δs = np.arange(0, 10, 0.01)
+bias = []
+for δ in δs:
+  simulate.Generate(50, 50, 100+δ, 4, img)
   I = BilinearInterpolate(img, xs+x, ys+y)
   I = I.reshape((Nθ, Nr))
   It = Z.Tilde(QI.Profile(I))
@@ -39,12 +43,14 @@ for δ in np.arange(0, 3, 0.6):
   Ai = np.abs(It)
   χ2 = np.sum((Ri-Rc)**2, axis=1)
   ΔΦ = np.average(Φi-Φc, axis=1, weights=Ai*Ac)
-  plt.plot(np.arange(0, 10, 1), ΔΦ, label=(5+δ), marker="o")
-  plt.plot(np.arange(0, 10, 1), np.zeros(10))
+  p = np.polynomial.polynomial.polyfit(δc, ΔΦ, 1)
+  bias.append(-p[0]/p[1] - δ)
+
+plt.plot(δs, bias, label="1 Calibration / unit")
 
 plt.grid()
 plt.legend()
-plt.xlabel('Z Position of Calibration Point')
-plt.ylabel('Unwrapped Phase Deviation w.r.t. Calibration')
-plt.title('Z Position w/ Simulation')
+plt.xlabel('Bias vs. test Z')
+plt.ylabel('Bias')
+plt.title('Test Z Position')
 plt.show()
