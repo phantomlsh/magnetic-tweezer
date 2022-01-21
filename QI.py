@@ -9,7 +9,7 @@ def SamplePoints(L, Nθ, Nr):
 	return rs * np.cos(θs), rs * np.sin(θs)
 
 def XY(Is, Nθ):
-	q = floor(Nθ/4)
+	q = int(Nθ/4)
 	Itr = np.sum(Is[0:q], axis=0)
 	Itl = np.sum(Is[q:2*q], axis=0)
 	Ibl = np.sum(Is[2*q:3*q], axis=0)
@@ -20,7 +20,7 @@ def XY(Is, Nθ):
 	Ib = (Ibl + Ibr) / 2
 	Ix = np.append(np.flip(Il), Ir)
 	Iy = np.append(np.flip(Ib), It)
-	return SymmetryCenter(Ix), SymmetryCenter(Iy)
+	return SymmetryCenter(Ix) + 0.472, SymmetryCenter(Iy) + 0.472
 
 def Profile(Is):
 	return NormalizeArray(np.sum(Is, axis=0))

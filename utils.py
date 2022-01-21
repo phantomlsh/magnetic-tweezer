@@ -21,10 +21,10 @@ def SymmetryCenter(array):
 	c = l/2
 	normalized = NormalizeArray(array)
 	fft = np.fft.rfft(normalized)
-	co = np.fft.irfft(fft * fft) * Gaussian(np.arange(l), c, c/4)
+	co = np.abs(np.fft.irfft(fft * fft)) * Gaussian(np.arange(l), c, c/4)
 	maxi = np.argmax(co)
 	p = np.polynomial.polynomial.polyfit(range(maxi-2, maxi+3, 1), co[maxi-2:maxi+3], 2)
-	return -p[1]/(4*p[2])-c/2 + 0.5
+	return -p[1]/(4*p[2])-c/2
 
 # Cannot deal with boundary, avoid boundary
 def BilinearInterpolate(im, x, y):

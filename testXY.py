@@ -3,7 +3,7 @@ import time
 import QI
 import simulate
 import matplotlib.pyplot as plt
-from utils import BilinearInterpolate, Gaussian
+from utils import BilinearInterpolate
 
 img = np.ndarray((100, 100))
 x = 50
@@ -22,13 +22,12 @@ for δ in δs:
 	simulate.Generate(50+δ, 50, 50, 4, img)
 	dx = 0
 	dy = 0
-	s = []
 	for i in range(3):
 		I = BilinearInterpolate(img, xs+x+dx, ys+y+dy)
 		I = I.reshape((Nθ, Nr))
 		Δx, Δy = QI.XY(I, Nθ)
-		dx += Δx * 0.8 - 0.0225
-		dy += Δy * 0.8 - 0.0225
+		dx += Δx * 0.8
+		dy += Δy * 0.8
 	
 	Δs.append(dx - δ)
 
