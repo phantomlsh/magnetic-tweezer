@@ -20,7 +20,7 @@ def XY(Is, Nθ):
 	Ib = (Ibl + Ibr) / 2
 	Ix = np.append(np.flip(Il), Ir)
 	Iy = np.append(np.flip(Ib), It)
-	return SymmetryCenter(Ix) + 0.472, SymmetryCenter(Iy) + 0.472
+	return SymmetryCenter(Ix), SymmetryCenter(Iy)
 
 def Profile(Is):
 	return NormalizeArray(np.sum(Is, axis=0))
