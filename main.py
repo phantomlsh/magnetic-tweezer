@@ -26,7 +26,7 @@ print(n, "Beads:", beads)
 def XYI(img, x, y):
 	xl = int(x)
 	yl = int(y)
-	r = 40
+	r = 35
 	f = 1.5
 	dx = utils.SymmetryCenter(np.sum(img[yl-2:yl+3, xl-r:xl+r], axis=0))
 	dy = utils.SymmetryCenter(np.sum(img[yl-r:yl+r, xl-2:xl+3], axis=1))
