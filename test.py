@@ -1,21 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from utils import BilinearInterpolate, Gaussian, SymmetryCenter
-import simulate
-import QI
+from scipy import signal
 
-img = np.ndarray((100, 100))
-x = 50
-y = 50
+xs = np.arange(-10, 10.1, 0.1)
+delta = np.arange(-1, 1, 0.01)
+bias = []
+for d in delta:
+	I = Gaussian(xs, d, 4) * np.cos((xs-d))
+	bias.append(SymmetryCenter(I)/10 - d)
 
-N = 80
-Nθ = 80
-Nr = 80
-xs, ys = QI.SamplePoints(N, Nθ, Nr)
-
-simulate.Generate(50, 50, 50, 4, img)
-I = BilinearInterpolate(img, xs+x, ys+y)
-I = I.reshape((Nθ, Nr))
-Δx, Δy = QI.XY(I, Nθ)
-
-print(Δx, Δy)
+plt.plot(delta, bias)
+plt.grid()
+plt.show()
+# plt.plot(xs, signal.correlate(np.flip(I), I, mode="same"))
+# plt.xticks(np.arange(-10, 10.1, 1))
+# plt.grid()
+# plt.show()
