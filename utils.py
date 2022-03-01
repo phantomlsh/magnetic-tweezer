@@ -23,14 +23,14 @@ def SymmetryCenter(array):
 	normalized = NormalizeArray(array)
 	co = signal.correlate(np.flip(normalized), normalized, mode='same')
 	maxi = np.argmax(co[c-20:c+20]) + c - 20
-	p = np.polynomial.polynomial.polyfit(range(maxi-2, maxi+3, 1), co[maxi-2:maxi+3], 2)
+	p = np.polynomial.polynomial.polyfit(range(maxi-2, maxi+3), co[maxi-2:maxi+3], 2)
 	return p[1]/(4*p[2])+c/2
 
 # Cannot deal with boundary, avoid boundary
 def BilinearInterpolate(im, x, y):
-	x0 = np.floor(x).astype(int)
+	x0 = x.astype(int)
+	y0 = y.astype(int)
 	x1 = x0 + 1
-	y0 = np.floor(y).astype(int)
 	y1 = y0 + 1
 
 	Ia = im[y0, x0]
@@ -38,10 +38,15 @@ def BilinearInterpolate(im, x, y):
 	Ic = im[y0, x1]
 	Id = im[y1, x1]
 
-	wa = (x1-x) * (y1-y)
-	wb = (x1-x) * (y-y0)
-	wc = (x-x0) * (y1-y)
-	wd = (x-x0) * (y-y0)
+	xu = x1 - x
+	xl = x - x0
+	yu = y1 - y
+	yl = y - y0
+
+	wa = xu * yu
+	wb = xu * yl
+	wc = xl * yu
+	wd = xl * yl
 
 	return wa*Ia + wb*Ib + wc*Ic + wd*Id
 

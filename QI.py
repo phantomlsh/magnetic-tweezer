@@ -1,16 +1,27 @@
 import numpy as np
-from math import floor, pi as π
-from utils import SymmetryCenter, NormalizeArray
+from math import pi as π
+from utils import SymmetryCenter, NormalizeArray, BilinearInterpolate
 
-# Nθ should be a multiple of 4
-def SamplePoints(L, Nθ, Nr):
-	rs = np.tile(np.arange(0, L/2, L/2/Nr), Nθ)
-	θs = np.repeat(np.arange(π/Nθ, 2*π, 2*π/Nθ), Nr)
-	return rs * np.cos(θs), rs * np.sin(θs)
-
-def XY(Is, Nθ):
+def Init(l, nθ, nr):
+	global Nθ, Nr, L, R, q, hq, sxs, sys
+	Nθ = nθ
+	Nr = nr
+	L = l
+	R = int(l/2)
 	q = int(Nθ/4)
 	hq = int(q/2)
+	rs = np.tile(np.arange(0, R, R/Nr), Nθ)
+	θs = np.repeat(np.arange(π/Nθ, 2*π, 2*π/Nθ), Nr)
+	sxs = rs * np.cos(θs)
+	sys = rs * np.sin(θs)
+
+def Interpolate(img, x, y):
+	global Is
+	Is = BilinearInterpolate(img, sxs+x, sys+y)
+	Is = Is.reshape((Nθ, Nr))
+	return Is
+
+def XY():
 	Itr = np.sum(Is[0:q], axis=0)
 	Itl = np.sum(Is[q:2*q], axis=0)
 	Ibl = np.sum(Is[2*q:3*q], axis=0)
@@ -23,5 +34,5 @@ def XY(Is, Nθ):
 	Iy = np.append(np.flip(Ib), It)
 	return SymmetryCenter(Ix), SymmetryCenter(Iy)
 
-def Profile(Is):
+def Profile():
 	return NormalizeArray(np.sum(Is, axis=0))
