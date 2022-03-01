@@ -2,12 +2,13 @@ import numpy as np
 from math import pi as π
 from utils import SymmetryCenter, NormalizeArray, BilinearInterpolate
 
-def Init(l, nθ, nr):
-	global Nθ, Nr, L, R, q, hq, sxs, sys
+def Init(l, nθ, nr, f):
+	global Nθ, Nr, L, R, F, q, hq, sxs, sys
 	Nθ = nθ
 	Nr = nr
 	L = l
 	R = int(l/2)
+	F = f
 	q = int(Nθ/4)
 	hq = int(q/2)
 	rs = np.tile(np.arange(0, R, R/Nr), Nθ)
@@ -32,7 +33,7 @@ def XY():
 	Ib = np.sum(Is[5*hq:7*hq], axis=0)
 	Ix = np.append(np.flip(Il), Ir)
 	Iy = np.append(np.flip(Ib), It)
-	return SymmetryCenter(Ix), SymmetryCenter(Iy)
+	return SymmetryCenter(Ix) * F, SymmetryCenter(Iy) * F
 
 def Profile():
 	return NormalizeArray(np.sum(Is, axis=0))

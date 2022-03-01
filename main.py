@@ -5,7 +5,7 @@ import time, mm, utils, QI
 # parameters
 minRadius = 15
 maxRadius = 30
-QI.Init(80, 80, 80)
+QI.Init(80, 80, 80, 1.5)
 
 img = mm.Get()
 circles = utils.HoughCircles(img, minRadius, maxRadius)
@@ -24,14 +24,13 @@ def XYI(img, x, y):
 	xl = int(x)
 	yl = int(y)
 	r = 40
-	f = 1.5
 	dx = utils.SymmetryCenter(np.sum(img[yl-2:yl+3, xl-r:xl+r], axis=0))
 	dy = utils.SymmetryCenter(np.sum(img[yl-r:yl+r, xl-2:xl+3], axis=1))
 	for i in range(2):
 		QI.Interpolate(img, xl+dx, yl+dy)
 		Δx, Δy = QI.XY()
-		dx += Δx * f
-		dy += Δy * f
+		dx += Δx
+		dy += Δy
 	return xl+dx, yl+dy, QI.Profile()
 
 ts = []
@@ -44,8 +43,9 @@ for loop in range(100):
 		xss[i].append(beads[i][0])
 
 print('time:', time.time() - start)
-print('STD:', np.std(xss[0][10:] - np.mean(xss, axis=0)[10:]))
-plt.plot(ts[10:], (xss[0] - np.mean(xss, axis=0))[10:], marker="o")
-plt.title('Relative X of 1 bead w.r.t. mean X of 6 beads')
+print('STD:', np.std(xss[0][10:] - np.mean(xss[1:], axis=0)[10:]))
+plt.plot(ts[10:], (xss[0] - np.mean(xss[1:], axis=0))[10:], marker="o")
+plt.title('Relative X of 1 bead w.r.t. mean X of beads')
 plt.xlabel('Time')
 plt.show()
+
