@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 # Normalize to [-1, 1]
 def NormalizeArray(array):
-	return array/(np.max(array)/2) - 1
+	return 2 * array / np.max(array) - 1
 
 def Gaussian(x, μ, σ):
 	return np.exp(-np.power(x-μ, 2.) / (2 * np.power(σ, 2.)))
@@ -17,14 +17,17 @@ def CropImage(img, x, y, L):
 	return img[yi-r:yi+r, xi-r:xi+r]
 
 # shift from the center
-def SymmetryCenter(array):
+def SymmetryCenter(array, d=0):
 	l = len(array)
-	c = int(l/2)
+	r = int(l/2)
 	normalized = NormalizeArray(array)
-	co = signal.correlate(np.flip(normalized), normalized, mode='same')
-	maxi = np.argmax(co[c-20:c+20]) + c - 20
+	freq = np.fft.rfftfreq(l*2)
+	fft = np.fft.rfft(np.append(normalized, np.zeros(l)))
+	fft *= np.exp(2j*np.pi*freq*d)
+	co = np.fft.irfft(fft * fft)[r-1:l+r-1]
+	maxi = np.argmax(co[r-30:r+30]) + r-30
 	p = np.polynomial.polynomial.polyfit(range(maxi-2, maxi+3), co[maxi-2:maxi+3], 2)
-	return p[1]/(4*p[2])+c/2
+	return -p[1]/(4*p[2])-r/2
 
 # Cannot deal with boundary, avoid boundary
 def BilinearInterpolate(im, x, y):

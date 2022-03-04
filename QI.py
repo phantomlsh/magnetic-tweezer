@@ -2,6 +2,8 @@ import numpy as np
 from math import pi as π
 from utils import SymmetryCenter, NormalizeArray, BilinearInterpolate
 
+Is = []
+
 def Init(l, nθ, nr, f):
 	global Nθ, Nr, L, R, F, q, hq, sxs, sys
 	Nθ = nθ

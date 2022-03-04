@@ -1,56 +1,43 @@
 import numpy as np
-import time
-import QI
-import Z
-import simulate
 import matplotlib.pyplot as plt
-from math import pi
-from utils import BilinearInterpolate, Gaussian
+import time, mm, utils, QI, Z
 
-img = np.ndarray((100, 100))
-x = 50
-y = 50
+# parameters
+minRadius = 15
+maxRadius = 30
+it = 2
+QI.Init(80, 80, 80, 1)
+Z.Init(80, 20)
 
-N = 80
-Nθ = 80
-Nr = 80
-xs, ys = QI.SamplePoints(N, Nθ, Nr)
+img = mm.Get()
+circles = utils.HoughCircles(img, minRadius, maxRadius)
+beads = []
+xss = []
+n = 0
+# find some good circles
+for c in circles:
+	if (c[0] > 80 and c[0] < 680 and c[1] > 80 and c[1] < 500):
+		beads.append([c[0], c[1]])
+		xss.append([])
+		n += 1
+print(n, "Beads:", beads)
 
-Rc = [] # real part
-Φc = [] # phase angle
-Ac = [] # amplitude
+def XYI(img, x, y):
+	xl = int(x)
+	yl = int(y)
+	r = 40
+	dx = utils.SymmetryCenter(np.sum(img[yl-2:yl+3, xl-r:xl+r], axis=0))
+	dy = utils.SymmetryCenter(np.sum(img[yl-r:yl+r, xl-2:xl+3], axis=1))
+	for i in range(it):
+		QI.Interpolate(img, xl+dx, yl+dy)
+		Δx, Δy = QI.XY()
+		dx += Δx
+		dy += Δy
+	return xl+dx, yl+dy, QI.Profile()
 
-δc = np.arange(0, 10, 1)
 
-for δ in δc:
-  simulate.Generate(50, 50, 100+δ, 4, img)
-  I = BilinearInterpolate(img, xs+x, ys+y)
-  I = I.reshape((Nθ, Nr))
-  It = Z.Tilde(QI.Profile(I))
-  Rc.append(np.real(It))
-  Φc.append(np.unwrap(np.angle(It)))
-  Ac.append(np.abs(It))
-
-δs = np.arange(0, 10, 0.01)
-bias = []
-for δ in δs:
-  simulate.Generate(50, 50, 100+δ, 4, img)
-  I = BilinearInterpolate(img, xs+x, ys+y)
-  I = I.reshape((Nθ, Nr))
-  It = Z.Tilde(QI.Profile(I))
-  Ri = np.real(It)
-  Φi = np.unwrap(np.angle(It))
-  Ai = np.abs(It)
-  χ2 = np.sum((Ri-Rc)**2, axis=1)
-  ΔΦ = np.average(Φi-Φc, axis=1, weights=Ai*Ac)
-  p = np.polynomial.polynomial.polyfit(δc, ΔΦ, 1)
-  bias.append(-p[0]/p[1] - δ)
-
-plt.plot(δs, bias, label="1 Calibration / unit")
-
-plt.grid()
-plt.legend()
-plt.xlabel('Bias vs. test Z')
-plt.ylabel('Bias')
-plt.title('Test Z Position')
+img = mm.Get()
+x, y, I = XYI(img, 225, 260)
+It = Z.Tilde(I)
+plt.plot(It)
 plt.show()
