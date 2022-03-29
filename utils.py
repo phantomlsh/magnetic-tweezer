@@ -17,17 +17,22 @@ def CropImage(img, x, y, L):
 	return img[yi-r:yi+r, xi-r:xi+r]
 
 # shift from the center
-def SymmetryCenter(array, d=0):
+def SymmetryCenter(array, it=1):
 	l = len(array)
 	r = int(l/2)
 	normalized = NormalizeArray(array)
 	freq = np.fft.rfftfreq(l*2)
 	fft = np.fft.rfft(np.append(normalized, np.zeros(l)))
-	fft *= np.exp(2j*np.pi*freq*d)
-	co = np.fft.irfft(fft * fft)[r-1:l+r-1]
-	maxi = np.argmax(co[r-30:r+30]) + r-30
-	p = np.polynomial.polynomial.polyfit(range(maxi-2, maxi+3), co[maxi-2:maxi+3], 2)
-	return -p[1]/(4*p[2])-r/2
+	res = 0
+	d = 0
+	for i in range(it):
+		fft *= np.exp(2j*np.pi*freq*d)
+		co = np.fft.irfft(fft * fft)[r-1:l+r-1]
+		maxi = np.argmax(co[r-30:r+30]) + r-30
+		p = np.polynomial.polynomial.polyfit(range(maxi-2, maxi+3), co[maxi-2:maxi+3], 2)
+		d = -p[1]/(4*p[2])-r/2
+		res += d
+	return res
 
 # Cannot deal with boundary, avoid boundary
 def BilinearInterpolate(im, x, y):

@@ -35,9 +35,9 @@ def Get():
 	return image_array[0,:,:]
 
 def GetZ():
-	return core.get_property("MCL NanoDrive Z Stage", "Set position Z (um)")
+	return float(core.get_property("MCL NanoDrive Z Stage", "Set position Z (um)")) * 1000
 
 print("Z =", GetZ())
 
 def SetZ(z):
-	core.set_property("MCL NanoDrive Z Stage", "Set position Z (um)", z)
+	core.set_property("MCL NanoDrive Z Stage", "Set position Z (um)", z / 1000)
