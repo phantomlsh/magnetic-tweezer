@@ -1,6 +1,5 @@
 import numpy as np
 import utils
-import Z
 import matplotlib.pyplot as plt
 
 π = np.pi
@@ -12,7 +11,7 @@ Global params initialization
 @param nr: sampling number in radial direction
 """
 def Init(r=40, nθ=80, nr=80):
-    global Nθ, Nr, L, R, sxs, sys
+    global Nθ, Nr, R, sxs, sys
     Nθ = nθ
     Nr = nr
     R = r
@@ -21,22 +20,20 @@ def Init(r=40, nθ=80, nr=80):
     # relative sample points
     sxs = rs * np.cos(θs)
     sys = rs * np.sin(θs)
-    Z.Init(Nr)
 
 """
 Find center near (x, y)
 @param img: 2d array of image data
 @param x: expected bead x position
 @param y: expected bead y position
-@param r: expected bead radius in pixel
 @param it: iteration times
 @return: x, y position
 """
-def XY(img, x, y, r=40, it=3):
+def XY(img, x, y, it):
     xl = int(x)
     yl = int(y)
-    xline = np.sum(img[yl-2:yl+3, xl-r:xl+r], axis=0)
-    yline = np.sum(img[yl-r:yl+r, xl-2:xl+3], axis=1)
+    xline = np.sum(img[yl-2:yl+3, xl-R:xl+R], axis=0)
+    yline = np.sum(img[yl-R:yl+R, xl-2:xl+3], axis=1)
     return xl + utils.SymmetryCenter(xline, it), yl + utils.SymmetryCenter(yline, it)
 
 """
@@ -47,28 +44,26 @@ Compute single side intensity profile
 @return: 1d array
 """
 def Profile(img, x, y):
-    Is = utils.BilinearInterpolate(img, sxs+x, sys+y)
-    Is = Is.reshape((Nθ, Nr))
-    Is = utils.NormalizeArray(np.sum(Is, axis=0))
-    return Is
+    Is = utils.BilinearInterpolate(img, sxs+x, sys+y).reshape((Nθ, Nr))
+    return utils.NormalizeArray(np.sum(Is, axis=0))
 
 """
 Compute filtered profile It
 @param I: 1d array, single side intensity profile
-@param rf: radius of forgetness
+@param rf: radius of forgetness, in unit of Nr
 @return: 1d array
 """
-def Tilde(I, rf=20):
+def Tilde(I, rf):
     I = np.append(np.flip(I), I)
     Iq = np.fft.fft(I) * utils.Gaussian(np.fft.fftfreq(I.shape[-1]), 0.05, 0.02)
     It = np.fft.ifft(Iq)
     return It[rf+Nr:len(It)]
 
 """
-Implemented interface for beads
+Interface for beads
 """
 class Bead:
-    def __init__(self, x, y):
+    def __init__(self, x, y, rf=20):
         self.x = x
         self.y = y
         # self calibration
@@ -77,19 +72,19 @@ class Bead:
         self.Φc = [] # phase angle
         self.Ac = [] # amplitude
 
-    def XY(self, img, r=40, it=3):
-        self.x, self.y = XY(img, self.x, self.y, r, it)
+    def XY(self, img, it=3):
+        self.x, self.y = XY(img, self.x, self.y, it)
         return self.x, self.y
 
     def Calibrate(self, img, z):
-        It = Tilde(Profile(img, self.x, self.y))
+        It = Tilde(Profile(img, self.x, self.y), self.rf)
         self.Zc.append(z)
         self.Rc.append(np.real(It))
         self.Φc.append(np.unwrap(np.angle(It)))
         self.Ac.append(np.abs(It))
 
     def Z(self, img):
-        It = Tilde(Profile(img, self.x, self.y))
+        It = Tilde(Profile(img, self.x, self.y), self.rf)
         Ri = np.real(It)
         Φi = np.unwrap(np.angle(It))
         Ai = np.abs(It)
