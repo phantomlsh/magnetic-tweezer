@@ -25,11 +25,11 @@ def SymmetryCenter(array, it=1):
 	fft = np.fft.rfft(np.append(normalized, np.zeros(l)))
 	res = 0
 	d = 0
-	for i in range(it):
+	for loop in range(it):
 		fft *= np.exp(2j*np.pi*freq*d)
 		co = np.fft.irfft(fft * fft)[r-1:l+r-1]
-		maxi = np.argmax(co[r-30:r+30]) + r-30
-		p = np.polynomial.polynomial.polyfit(range(maxi-2, maxi+3), co[maxi-2:maxi+3], 2)
+		i = np.argmax(co[r-30:r+30]) + r-30
+		p = np.polynomial.polynomial.polyfit(range(i-2, i+3), co[i-2:i+3], 2)
 		d = -p[1]/(4*p[2])-r/2
 		res += d
 	return res

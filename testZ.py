@@ -3,26 +3,33 @@ import matplotlib.pyplot as plt
 import time, mm, utils, Z
 import T
 
-# parameters
 T.Init()
+B = T.Bead(350, 290)
 
-T.Calibrate(mm.Get, mm.GetZ, mm.SetZ, 200, 320)
-
-# test
+# calibrate
 sz = mm.GetZ()
-mm.SetZ(sz + 300)
-zs = []
-bias = []
-for i in range(4):
-	z = mm.GetZ()
-	zs.append(z)
-	img = mm.Get()
-	x, y = T.XY(img, 200, 320)
-	It = Z.Tilde(T.Profile(img, x, y))
-	bias.append(Z.Z(It) - z)
-	mm.SetZ(z + 200)
+for i in range(50):
+    img = mm.Get()
+    z = mm.GetZ()
+    B.XY(img)
+    B.Calibrate(img, z)
+    mm.SetZ(z + 100)
 
-print(bias)
+mm.SetZ(sz)
+plt.imshow(np.flip(B.Rc, axis=0))
+plt.show()
+# test
+
+mm.SetZ(sz + 200)
+zs = []
+for i in range(4):
+    z = mm.GetZ()
+    zs.append(z)
+    img = mm.Get()
+    B.XY(img)
+    print(B.Z(img) - z)
+    mm.SetZ(z + 200)
+
 plt.scatter(zs, np.zeros(4))
 plt.grid()
 plt.show()

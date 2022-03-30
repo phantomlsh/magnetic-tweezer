@@ -79,7 +79,7 @@ class Bead:
     def __str__(self):
         return f"Bead({self.x}, {self.y}, rf={self.rf})"
 
-    def XY(self, img, it=3):
+    def XY(self, img, it=2):
         self.x, self.y = XY(img, self.x, self.y, it)
         return self.x, self.y
 
@@ -96,9 +96,10 @@ class Bead:
         Φi = np.unwrap(np.angle(It))
         Ai = np.abs(It)
         χ2 = np.sum((Ri-self.Rc)**2, axis=1)
-        mini = np.argmin(χ2)
+        i = np.argmin(χ2)
         ΔΦ = np.average(Φi-self.Φc, axis=1, weights=Ai*self.Ac)
-        plt.plot(self.Zc, ΔΦ)
         p = np.polynomial.polynomial.polyfit(self.Zc, ΔΦ, 1)
+        plt.plot(self.Zc, ΔΦ)
+        plt.plot(self.Zc, p[1] * np.array(self.Zc) + p[0])
         self.z = -p[0]/p[1]
         return self.z
