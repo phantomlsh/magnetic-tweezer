@@ -66,11 +66,18 @@ class Bead:
     def __init__(self, x, y, rf=20):
         self.x = x
         self.y = y
+        self.rf = rf
         # self calibration
         self.Zc = [] # Z values
         self.Rc = [] # real part
         self.Φc = [] # phase angle
         self.Ac = [] # amplitude
+
+    def __repr__(self):
+        return f"Bead({self.x}, {self.y}, rf={self.rf})"
+
+    def __str__(self):
+        return f"Bead({self.x}, {self.y}, rf={self.rf})"
 
     def XY(self, img, it=3):
         self.x, self.y = XY(img, self.x, self.y, it)
