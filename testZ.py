@@ -1,10 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import time, mm, utils, Z
+import time
+import mm
 import T
 
 T.Init()
-B = T.Bead(350, 290)
+B = T.Bead(342, 305)
+B.XY(mm.Get())
 
 # calibrate
 sz = mm.GetZ()
@@ -16,22 +18,24 @@ for i in range(50):
     mm.SetZ(z + 100)
 
 mm.SetZ(sz)
-plt.imshow(np.flip(B.Rc, axis=0))
+plt.title('Calibration')
+plt.imshow(np.flip(B.Rc, axis=0), cmap="gray")
 plt.show()
 # test
 
-mm.SetZ(sz + 200)
-zs = []
+mm.SetZ(sz + 900)
 for i in range(4):
     z = mm.GetZ()
-    zs.append(z)
+    plt.axvline(x=z)
     img = mm.Get()
     B.XY(img)
     print(B.Z(img) - z)
-    mm.SetZ(z + 200)
+    mm.SetZ(z + 950)
 
-plt.scatter(zs, np.zeros(4))
 plt.grid()
+plt.title('Delta Phi for 4 sampled z position')
+plt.xlabel('Z(nm)')
+plt.ylabel('Delta Phi')
 plt.show()
 
 mm.SetZ(sz)

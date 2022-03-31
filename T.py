@@ -77,14 +77,15 @@ class Bead:
         return f"Bead({self.x}, {self.y}, rf={self.rf})"
 
     def __str__(self):
-        return f"Bead({self.x}, {self.y}, rf={self.rf})"
+        return f"Bead({self.x}, {self.y})"
 
     def XY(self, img, it=2):
         self.x, self.y = XY(img, self.x, self.y, it)
         return self.x, self.y
 
     def Calibrate(self, img, z):
-        It = Tilde(Profile(img, self.x, self.y), self.rf)
+        I = Profile(img, self.x, self.y)
+        It = Tilde(I, self.rf)
         self.Zc.append(z)
         self.Rc.append(np.real(It))
         self.Φc.append(np.unwrap(np.angle(It)))
@@ -99,7 +100,10 @@ class Bead:
         i = np.argmin(χ2)
         ΔΦ = np.average(Φi-self.Φc, axis=1, weights=Ai*self.Ac)
         p = np.polynomial.polynomial.polyfit(self.Zc, ΔΦ, 1)
-        plt.plot(self.Zc, ΔΦ)
-        plt.plot(self.Zc, p[1] * np.array(self.Zc) + p[0])
+
+        #plt.plot(self.Zc, χ2, marker="o")
+        plt.plot(self.Zc, ΔΦ, marker="o")
+        #plt.plot(self.Zc, p[1] * np.array(self.Zc) + p[0])
+        
         self.z = -p[0]/p[1]
         return self.z
