@@ -99,11 +99,11 @@ class Bead:
         χ2 = np.sum((Ri-self.Rc)**2, axis=1)
         i = np.argmin(χ2)
         ΔΦ = np.average(Φi-self.Φc, axis=1, weights=Ai*self.Ac)
-        p = np.polynomial.polynomial.polyfit(self.Zc, ΔΦ, 1)
+        p = np.polynomial.polynomial.polyfit(self.Zc[i-6:i+6], ΔΦ[i-6:i+6], 1)
 
         #plt.plot(self.Zc, χ2, marker="o")
-        plt.plot(self.Zc, ΔΦ, marker="o")
-        #plt.plot(self.Zc, p[1] * np.array(self.Zc) + p[0])
+        plt.scatter(self.Zc, ΔΦ)
+        plt.plot(self.Zc[i-6:i+6], p[1] * np.array(self.Zc)[i-6:i+6] + p[0])
         
         self.z = -p[0]/p[1]
         return self.z

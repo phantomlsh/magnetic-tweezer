@@ -5,7 +5,7 @@ import mm
 import T
 
 T.Init()
-B = T.Bead(342, 305)
+B = T.Bead(338, 330)
 B.XY(mm.Get())
 
 # calibrate
@@ -18,19 +18,23 @@ for i in range(50):
     mm.SetZ(z + 100)
 
 mm.SetZ(sz)
-plt.title('Calibration')
-plt.imshow(np.flip(B.Rc, axis=0), cmap="gray")
+# plt.title('Calibration')
+# plt.imshow(np.flip(B.Rc, axis=0), cmap="gray")
+# plt.show()
+
+plt.title('Calibration Phi')
+plt.imshow(np.flip(B.Φc, axis=0), cmap="gray")
 plt.show()
 # test
 
 mm.SetZ(sz + 900)
 for i in range(4):
     z = mm.GetZ()
-    plt.axvline(x=z)
     img = mm.Get()
     B.XY(img)
     print(B.Z(img) - z)
     mm.SetZ(z + 950)
+    plt.axvline(x=z)
 
 plt.grid()
 plt.title('Delta Phi for 4 sampled z position')
