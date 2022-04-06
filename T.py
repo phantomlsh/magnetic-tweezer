@@ -83,8 +83,13 @@ class Bead:
         self.x, self.y = XY(img, self.x, self.y, it)
         return self.x, self.y
 
-    def Calibrate(self, img, z):
-        I = Profile(img, self.x, self.y)
+    def Calibrate(self, imgs, z):
+        l = []
+        for img in imgs:
+            self.XY(img)
+            I = Profile(img, self.x, self.y)
+            l.append(I)
+        I = np.average(l, axis=0)
         It = Tilde(I, self.rf)
         self.Zc.append(z)
         self.Rc.append(np.real(It))
@@ -100,10 +105,11 @@ class Bead:
         i = np.argmin(χ2)
         ΔΦ = np.average(Φi-self.Φc, axis=1, weights=Ai*self.Ac)
         p = np.polynomial.polynomial.polyfit(self.Zc[i-6:i+6], ΔΦ[i-6:i+6], 1)
-
+        self.z = -p[0]/p[1]
+        
         #plt.plot(self.Zc, χ2, marker="o")
         plt.scatter(self.Zc, ΔΦ)
-        plt.plot(self.Zc[i-6:i+6], p[1] * np.array(self.Zc)[i-6:i+6] + p[0])
+        #plt.plot(self.Zc[i-6:i+6], p[1] * np.array(self.Zc)[i-6:i+6] + p[0])
         
-        self.z = -p[0]/p[1]
+        
         return self.z

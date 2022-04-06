@@ -23,11 +23,6 @@ def exit_handler():
 
 atexit.register(exit_handler)
 
-def normalize(image):
-    image_array = np.reshape(image, newshape=[-1, Height, Width])
-    image_array = (image_array / image_array.max() * 255).astype("uint8")
-    return image_array[0,:,:]
-
 def Get():
     image = core.get_last_image()
     image_array = np.reshape(image, newshape=[-1, Height, Width])
