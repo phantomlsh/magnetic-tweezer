@@ -5,16 +5,20 @@ import mm
 import T
 
 T.Init()
-B = T.Bead(360, 285)
+B = T.Bead(486, 203)
 B.XY(mm.Get())
+
+def imgSet(n):
+    res = []
+    for i in range(n):
+        res.append(mm.Get())
+        time.sleep(0.02)
+    return res
 
 # calibrate
 sz = mm.GetZ()
 for i in range(50):
-    imgs = []
-    for loop in range(5):
-        imgs.append(mm.Get())
-        time.sleep(0.02)
+    imgs = imgSet(10)
     z = mm.GetZ()
     B.Calibrate(imgs, z)
     mm.SetZ(z + 100)
