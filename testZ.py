@@ -5,7 +5,7 @@ import mm
 import T
 
 T.Init()
-B = T.Bead(486, 203)
+B = T.Bead(469, 130)
 B.XY(mm.Get())
 
 def imgSet(n):
@@ -18,19 +18,20 @@ def imgSet(n):
 # calibrate
 sz = mm.GetZ()
 for i in range(50):
-    imgs = imgSet(10)
+    imgs = imgSet(5)
     z = mm.GetZ()
     B.Calibrate(imgs, z)
     mm.SetZ(z + 100)
 
-mm.SetZ(sz)
-# plt.title('Calibration')
-# plt.imshow(np.flip(B.Rc, axis=0), cmap="gray")
-# plt.show()
+B.ComputeCalibration()
 
-plt.title('Calibration Phi')
-plt.imshow(np.flip(B.Φc, axis=0), cmap="gray")
+plt.plot(np.array(B.Φc)[10, :])
 plt.show()
+
+plt.title('Calibration')
+plt.imshow(np.flip(B.Rc, axis=0), cmap="gray")
+plt.show()
+
 # test
 
 mm.SetZ(sz + 900)

@@ -34,6 +34,9 @@ def SymmetryCenter(array, it=1):
 		res += d
 	return res
 
+def LinearFilter(x, w):
+	return signal.savgol_filter(x, w, 1)
+
 # Cannot deal with boundary, avoid boundary
 def BilinearInterpolate(im, x, y):
 	x0 = x.astype(int)

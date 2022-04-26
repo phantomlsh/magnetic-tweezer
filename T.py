@@ -51,30 +51,32 @@ def Profile(img, x, y):
 Compute filtered profile It
 @param I: 1d array, single side intensity profile
 @param rf: radius of forgetness, in unit of Nr
+@param w: window range, in unit of Nr
 @return: 1d array
 """
-def Tilde(I, rf):
+def Tilde(I, rf, w):
     I = np.append(np.flip(I), I)
-    Iq = np.fft.fft(I) * utils.Gaussian(np.fft.fftfreq(I.shape[-1]), 0.05, 0.02)
-    It = np.fft.ifft(Iq)
+    Iq = np.fft.fft(I)
+    q = np.fft.fftfreq(I.shape[-1])
+    L = len(Iq)
+    win = np.append(np.zeros(w[0]), np.hanning(w[1]-w[0]))
+    win = np.append(win, np.zeros(L-w[1]))
+    It = np.fft.ifft(Iq*win)
     return It[rf+Nr:len(It)]
 
 """
 Interface for beads
 """
 class Bead:
-    def __init__(self, x, y, rf=20):
+    def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.rf = rf
         # self calibration
+        self.Ic = [] # Intensity Profiles
         self.Zc = [] # Z values
-        self.Rc = [] # real part
-        self.Φc = [] # phase angle
-        self.Ac = [] # amplitude
 
     def __repr__(self):
-        return f"Bead({self.x}, {self.y}, rf={self.rf})"
+        return f"Bead({self.x}, {self.y})"
 
     def __str__(self):
         return f"Bead({self.x}, {self.y})"
@@ -89,15 +91,23 @@ class Bead:
             self.XY(img)
             I = Profile(img, self.x, self.y)
             l.append(I)
-        I = np.average(l, axis=0)
-        It = Tilde(I, self.rf)
+        self.Ic.append(np.average(l, axis=0))
         self.Zc.append(z)
-        self.Rc.append(np.real(It))
-        self.Φc.append(np.unwrap(np.angle(It)))
-        self.Ac.append(np.abs(It))
+
+    def ComputeCalibration(self, rf=12, w=[7, 16]):
+        self.rf = rf
+        self.w = w
+        self.Rc = [] # real part
+        self.Φc = [] # phase angle
+        self.Ac = [] # amplitude
+        for I in self.Ic:
+            It = Tilde(I, rf, w)
+            self.Rc.append(np.real(It))
+            self.Φc.append(np.unwrap(np.angle(It)))
+            self.Ac.append(np.abs(It))
 
     def Z(self, img):
-        It = Tilde(Profile(img, self.x, self.y), self.rf)
+        It = Tilde(Profile(img, self.x, self.y), self.rf, self.w)
         Ri = np.real(It)
         Φi = np.unwrap(np.angle(It))
         Ai = np.abs(It)
@@ -110,6 +120,5 @@ class Bead:
         #plt.plot(self.Zc, χ2, marker="o")
         plt.scatter(self.Zc, ΔΦ)
         #plt.plot(self.Zc[i-6:i+6], p[1] * np.array(self.Zc)[i-6:i+6] + p[0])
-        
         
         return self.z

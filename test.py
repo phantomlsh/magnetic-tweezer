@@ -1,15 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import utils
 
-x = np.arange(-3, 3)
+x = np.arange(-5, 5)
 
-ds = np.arange(-2, 2, 0.01)
+ds = np.arange(-3, 3, 0.01)
 bias = []
 
 for d in ds:
-    y = (x - d)**2
+    y = np.cos((x-d)/10)
     p = np.polynomial.polynomial.polyfit(x, y, 2)
     bias.append(-p[1]/(2*p[2]) - d)
 
 plt.plot(ds, bias)
+plt.grid()
 plt.show()
