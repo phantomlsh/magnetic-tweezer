@@ -2,27 +2,22 @@ import taichi as ti
 import numpy as np
 ti.init(arch=ti.gpu)
 
+π = np.pi
+
 @ti.kernel
 def tiFillSPs():
     fr = R/Nr
+    fθ = 2*π/Nθ
     for r in range(Nr):
-        fθ = 2 * np.pi / Nθs[r]
-        for θ in range(Nθs[r]):
+        for θ in range(Nθ):
             SPs[r, θ][0] = fr * r * ti.cos(θ * fθ)
             SPs[r, θ][1] = fr * r * ti.sin(θ * fθ)
 
-def SetSamplePoint(r=40, nr=80, nθs=[]):
-    global R, Nr, Nθs, SPs
+def SetSamplePoint(r=40, nr=80, nθ=80):
+    global R, Nr, Nθ, SPs
     R = r
     Nr = nr
-    if (len(nθs) == nr):
-        nθs = np.array(nθs)
-    else:
-        nθs = np.zeros(nr) + nr
-    nθs = nθs.astype(int)
-    nθ = nθs.max()
-    Nθs = ti.field(dtype=ti.i32, shape=(nr))
-    Nθs.from_numpy(nθs)
+    Nθ = nθ
     SPs = ti.Vector.field(n=2, dtype=ti.f32, shape=(nr,nθ))
     tiFillSPs()
 
@@ -34,7 +29,7 @@ def tiBI(im: ti.types.ndarray(), n: int, xs: ti.types.ndarray(), ys: ti.types.nd
     for l in range(ll):
         r = l % Nr # index of ring
         i = l // Nr # index of beads
-        for θ in range(Nθs[r]):
+        for θ in range(Nθ):
             x = xs[i] + SPs[r, θ][0]
             y = ys[i] + SPs[r, θ][1]
 
@@ -60,7 +55,7 @@ def tiBI(im: ti.types.ndarray(), n: int, xs: ti.types.ndarray(), ys: ti.types.nd
 
             res[l] += wa*Ia + wb*Ib + wc*Ic + wd*Id
 
-        res[l] /= Nθs[r]
+        res[l] /= Nθ
 
 def Profile(img, beads):
     n = len(beads)
