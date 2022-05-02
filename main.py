@@ -26,8 +26,8 @@ start = time.time()
 for loop in range(500):
 	img = mm.Get()
 	ts.append(time.time() - start)
+	T.XY(beads, img)
 	for i in range(n):
-		beads[i].XY(img)
 		xss[i].append(beads[i].x)
 
 print('time:', time.time() - start)

@@ -1,5 +1,6 @@
 import numpy as np
 import utils
+import kernel
 import matplotlib.pyplot as plt
 
 π = np.pi
@@ -22,19 +23,36 @@ def Init(r=40, nθ=80, nr=80):
     sys = rs * np.sin(θs)
 
 """
-Find center near (x, y)
+Calculate XY Position
+@param beads: list of beads
 @param img: 2d array of image data
-@param x: expected bead x position
-@param y: expected bead y position
 @param it: iteration times
-@return: x, y position
 """
-def XY(img, x, y, it):
-    xl = int(x)
-    yl = int(y)
-    xline = np.sum(img[yl-2:yl+3, xl-R:xl+R], axis=0)
-    yline = np.sum(img[yl-R:yl+R, xl-2:xl+3], axis=1)
-    return xl + utils.SymmetryCenter(xline, it), yl + utils.SymmetryCenter(yline, it)
+def XY(beads, img, it=3):
+    for b in beads:
+        xl = int(b.x)
+        yl = int(b.y)
+        xline = np.sum(img[yl-2:yl+3, xl-R:xl+R], axis=0)
+        yline = np.sum(img[yl-R:yl+R, xl-2:xl+3], axis=1)
+        b.x = xl + utils.SymmetryCenter(xline, it)
+        b.y = yl + utils.SymmetryCenter(yline, it)
+
+"""
+Calculate I and store
+@param beads: list of beads
+@param img: 2d array of image data
+@param it: iteration times
+"""
+def Calibrate(imgs, beads, z):
+    for img in imgs:
+        XY(img, beads)
+        for b in beads:
+            l = []
+            for img in imgs:
+                I = Profile(img, self.x, self.y)
+                l.append(I)
+            self.Ic.append(np.average(l, axis=0))
+            self.Zc.append(z)
 
 """
 Compute single side intensity profile
@@ -44,7 +62,11 @@ Compute single side intensity profile
 @return: 1d array
 """
 def Profile(img, x, y):
-    Is = utils.BilinearInterpolate(img, sxs+x, sys+y).reshape((Nθ, Nr))
+    n = Nθ*Nr
+    res = np.zeros(n)
+    im = img.astype(int)
+    kernel.tiBI(im, n, sxs+x, sys+y, res)
+    Is = res.reshape((Nθ, Nr))
     return utils.NormalizeArray(np.sum(Is, axis=0))
 
 """
@@ -94,7 +116,7 @@ class Bead:
         self.Ic.append(np.average(l, axis=0))
         self.Zc.append(z)
 
-    def ComputeCalibration(self, rf=12, w=[7, 16]):
+    def ComputeCalibration(self, rf=12, w=[5, 15]):
         self.rf = rf
         self.w = w
         self.Rc = [] # real part
@@ -115,10 +137,6 @@ class Bead:
         i = np.argmin(χ2)
         ΔΦ = np.average(Φi-self.Φc, axis=1, weights=Ai*self.Ac)
         p = np.polynomial.polynomial.polyfit(self.Zc[i-6:i+6], ΔΦ[i-6:i+6], 1)
-        self.z = -p[0]/p[1]
-        
-        #plt.plot(self.Zc, χ2, marker="o")
         plt.scatter(self.Zc, ΔΦ)
-        #plt.plot(self.Zc[i-6:i+6], p[1] * np.array(self.Zc)[i-6:i+6] + p[0])
-        
+        self.z = -p[0]/p[1]     
         return self.z

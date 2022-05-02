@@ -23,15 +23,17 @@ def SetSamplePoint(r=40, nr=80, nθ=80):
 
 SetSamplePoint()
 
+n = 1
+
 @ti.kernel
-def tiBI(im: ti.types.ndarray(), n: int, xs: ti.types.ndarray(), ys: ti.types.ndarray(), res: ti.types.ndarray()):
+def tiBI(im: ti.types.ndarray(), ps: ti.types.ndarray(), res: ti.types.ndarray()):
     ll = n * Nr # total result length
     for l in range(ll):
         r = l % Nr # index of ring
         i = l // Nr # index of beads
         for θ in range(Nθ):
-            x = xs[i] + SPs[r, θ][0]
-            y = ys[i] + SPs[r, θ][1]
+            x = ps[i, 0] + SPs[r, θ][0]
+            y = ps[i, 1] + SPs[r, θ][1]
 
             x0 = int(x)
             y0 = int(y)
@@ -58,12 +60,11 @@ def tiBI(im: ti.types.ndarray(), n: int, xs: ti.types.ndarray(), ys: ti.types.nd
         res[l] /= Nθ
 
 def Profile(img, beads):
+    global n
     n = len(beads)
-    xs = []
-    ys = []
+    ps = []
     for b in beads:
-        xs.append(b.x)
-        ys.append(b.y)
+        ps.append([b.x, b.y])
     Is = np.zeros(Nr * n)
-    tiBI(img, n, np.array(xs), np.array(ys), Is)
+    tiBI(img, np.array(ps), Is)
     return Is.reshape((n, Nr))

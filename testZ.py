@@ -5,7 +5,7 @@ import mm
 import T
 
 T.Init()
-B = T.Bead(469, 130)
+B = T.Bead(351, 378)
 B.XY(mm.Get())
 
 def imgSet(n):
@@ -24,9 +24,6 @@ for i in range(50):
     mm.SetZ(z + 100)
 
 B.ComputeCalibration()
-
-plt.plot(np.array(B.Φc)[10, :])
-plt.show()
 
 plt.title('Calibration')
 plt.imshow(np.flip(B.Rc, axis=0), cmap="gray")
@@ -48,5 +45,14 @@ plt.title('Delta Phi for 4 sampled z position')
 plt.xlabel('Z(nm)')
 plt.ylabel('Delta Phi')
 plt.show()
+
+# zs = []
+# for i in range(200):
+#     img = mm.Get()
+#     B.XY(img)
+#     zs.append(B.Z(img))
+
+# plt.plot(range(200), zs, marker="o")
+# plt.show()
 
 mm.SetZ(sz)
