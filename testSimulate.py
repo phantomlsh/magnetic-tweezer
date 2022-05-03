@@ -45,7 +45,7 @@ print("--- %s seconds ---" % (time.time() - start))
 start = time.time()
 
 beads = []
-for i in range(100):
+for i in range(10):
     beads.append(T.Bead(50, 50))
 
 for i in range(10000):

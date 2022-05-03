@@ -58,13 +58,13 @@ def tiBI(im: ti.types.ndarray(), ps: ti.types.ndarray(), res: ti.types.ndarray()
 
         res[l] /= Nθ
 
-def Profile(img, beads):
+def Profile(beads, img):
     ps = []
     for b in beads:
         ps.append([b.x, b.y])
     n = len(ps)
     Is = np.zeros(Nr * n)
-    tiBI(img, np.array(ps), Is)
+    tiBI(img.astype(int), np.array(ps), Is)
     Is = Is.reshape((n, Nr))
     for i in range(n):
         beads[i].profile = Is[i]

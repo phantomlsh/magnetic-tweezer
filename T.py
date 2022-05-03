@@ -40,51 +40,53 @@ def XY(beads, img, it=3):
 """
 Calculate I and store
 @param beads: list of beads
-@param img: 2d array of image data
-@param it: iteration times
+@param imgs: array of 2d array of image data
+@param z: z position
 """
-def Calibrate(imgs, beads, z):
+def Calibrate(beads, imgs, z):
+    for b in beads:
+        b.l = []
     for img in imgs:
-        XY(img, beads)
+        XY(beads, img)
+        kernel.Profile(beads, img)
         for b in beads:
-            l = []
-            for img in imgs:
-                I = Profile(img, self.x, self.y)
-                l.append(I)
-            self.Ic.append(np.average(l, axis=0))
-            self.Zc.append(z)
+            b.l.append(b.profile)
+    for b in beads:
+        b.Ic.append(np.average(b.l, axis=0))
+        b.Zc.append(z)
 
-"""
-Compute single side intensity profile
-@param img: 2d array of image data
-@param x: expected bead x position
-@param y: expected bead y position
-@return: 1d array
-"""
-def Profile(img, x, y):
-    n = Nθ*Nr
-    res = np.zeros(n)
-    im = img.astype(int)
-    kernel.tiBI(im, n, sxs+x, sys+y, res)
-    Is = res.reshape((Nθ, Nr))
-    return utils.NormalizeArray(np.sum(Is, axis=0))
+def ComputeCalibration(beads, rf=12, w=[5, 15]):
+    for b in beads:
+        b.rf = rf
+        b.w = w
+        b.Rc = [] # real part
+        b.Φc = [] # phase angle
+        b.Ac = [] # amplitude
+        for I in b.Ic:
+            It = utils.Tilde(I, rf, w)
+            b.Rc.append(np.real(It))
+            b.Φc.append(np.angle(It))
+            b.Ac.append(np.abs(It))
+        b.Φc = np.unwrap(b.Φc, axis=0)
+        b.Φc = np.unwrap(b.Φc, axis=1)
 
-"""
-Compute filtered profile It
-@param I: 1d array, single side intensity profile
-@param rf: radius of forgetness, in unit of Nr
-@param w: window range, in unit of Nr
-@return: 1d array
-"""
-def Tilde(I, rf, w):
-    I = np.append(np.flip(I), I)
-    Iq = np.fft.fft(I)
-    q = np.fft.fftfreq(I.shape[-1])
-    L = len(Iq)
-    win = np.append(np.zeros(w[0]), np.hanning(w[1]-w[0]))
-    win = np.append(win, np.zeros(L-w[1]))
-    It = np.fft.ifft(Iq*win)
-    return It[rf+Nr:len(It)]
+def Z(beads, img):
+    kernel.Profile(beads, img)
+    for b in beads:
+        It = utils.Tilde(b.profile, b.rf, b.w)
+        Ri = np.real(It)
+        Φi = np.unwrap(np.angle(It))
+        Ai = np.abs(It)
+        χ2 = np.sum((Ri-b.Rc)**2, axis=1)
+        i = np.argmin(χ2)
+        while Φi[5] - b.Φc[i][5] > 3:
+            Φi = Φi - 2*π
+        while Φi[5] - b.Φc[i][5] < -3:
+            Φi = Φi + 2*π
+        ΔΦ = np.average(Φi-b.Φc, axis=1, weights=Ai*b.Ac)
+        p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ[i-3:i+4], 1)
+        #plt.scatter(b.Zc, ΔΦ)
+        b.z = -p[0]/p[1]
 
 """
 Interface for beads
@@ -98,45 +100,7 @@ class Bead:
         self.Zc = [] # Z values
 
     def __repr__(self):
-        return f"Bead({self.x}, {self.y})"
+        return f"Bead({self.x}, {self.y}, {self.z})"
 
     def __str__(self):
-        return f"Bead({self.x}, {self.y})"
-
-    def XY(self, img, it=2):
-        self.x, self.y = XY(img, self.x, self.y, it)
-        return self.x, self.y
-
-    def Calibrate(self, imgs, z):
-        l = []
-        for img in imgs:
-            self.XY(img)
-            I = Profile(img, self.x, self.y)
-            l.append(I)
-        self.Ic.append(np.average(l, axis=0))
-        self.Zc.append(z)
-
-    def ComputeCalibration(self, rf=12, w=[5, 15]):
-        self.rf = rf
-        self.w = w
-        self.Rc = [] # real part
-        self.Φc = [] # phase angle
-        self.Ac = [] # amplitude
-        for I in self.Ic:
-            It = Tilde(I, rf, w)
-            self.Rc.append(np.real(It))
-            self.Φc.append(np.unwrap(np.angle(It)))
-            self.Ac.append(np.abs(It))
-
-    def Z(self, img):
-        It = Tilde(Profile(img, self.x, self.y), self.rf, self.w)
-        Ri = np.real(It)
-        Φi = np.unwrap(np.angle(It))
-        Ai = np.abs(It)
-        χ2 = np.sum((Ri-self.Rc)**2, axis=1)
-        i = np.argmin(χ2)
-        ΔΦ = np.average(Φi-self.Φc, axis=1, weights=Ai*self.Ac)
-        p = np.polynomial.polynomial.polyfit(self.Zc[i-6:i+6], ΔΦ[i-6:i+6], 1)
-        plt.scatter(self.Zc, ΔΦ)
-        self.z = -p[0]/p[1]     
-        return self.z
+        return f"Bead({self.x}, {self.y}, {self.z})"

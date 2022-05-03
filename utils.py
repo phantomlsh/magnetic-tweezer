@@ -34,29 +34,15 @@ def SymmetryCenter(array, it=1):
         res += d
     return res
 
-# Cannot deal with boundary, avoid boundary
-def BilinearInterpolate(im, x, y):
-    x0 = x.astype(int)
-    y0 = y.astype(int)
-    x1 = x0 + 1
-    y1 = y0 + 1
-
-    Ia = im[y0, x0]
-    Ib = im[y1, x0]
-    Ic = im[y0, x1]
-    Id = im[y1, x1]
-
-    xu = x1 - x
-    xl = x - x0
-    yu = y1 - y
-    yl = y - y0
-
-    wa = xu * yu
-    wb = xu * yl
-    wc = xl * yu
-    wd = xl * yl
-
-    return wa*Ia + wb*Ib + wc*Ic + wd*Id
+def Tilde(I, rf, w):
+    I = np.append(np.flip(I), I)
+    Iq = np.fft.fft(I)
+    q = np.fft.fftfreq(I.shape[-1])
+    L = len(Iq)
+    win = np.append(np.zeros(w[0]), np.hanning(w[1]-w[0]))
+    win = np.append(win, np.zeros(L-w[1]))
+    It = np.fft.ifft(Iq*win)
+    return It[rf+(len(It)//2):len(It)]
 
 def HoughCircles(image, minRadius, maxRadius):
     circles = cv.HoughCircles(image, cv.HOUGH_GRADIENT, 1, 50, param1=50, param2=30, minRadius=minRadius, maxRadius=maxRadius)
