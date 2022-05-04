@@ -14,7 +14,7 @@ Width = tagged_image.tags["Width"]
 print("Initializing...")
 print("Width =", Width, " Height =", Height)
 
-core.start_continuous_sequence_acquisition(17)
+core.start_continuous_sequence_acquisition(1)
 time.sleep(1)
 
 def exit_handler():

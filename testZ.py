@@ -4,9 +4,9 @@ import time
 import mm
 import T
 
-beads = [T.Bead(537, 383), T.Bead(506, 458)]
+beads = [T.Bead(507, 381), T.Bead(477, 454)]
 for i in range(3):
-    beads.append(T.Bead(537, 383))
+    beads.append(T.Bead(507, 381))
 T.XY(beads, mm.Get())
 
 def imgSet(n):
@@ -50,7 +50,7 @@ mm.SetZ(sz + 900)
 
 start = time.time()
 zs = []
-for i in range(500):
+for i in range(1000):
     img = mm.Get()
     T.XY(beads, img)
     T.Z(beads, img)

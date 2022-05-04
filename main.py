@@ -22,7 +22,7 @@ print(n, "Beads:", beads)
 
 ts = []
 start = time.time()
-for loop in range(500):
+for loop in range(1000):
 	img = mm.Get()
 	ts.append(time.time() - start)
 	T.XY(beads, img)

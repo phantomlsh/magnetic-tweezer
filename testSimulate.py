@@ -24,7 +24,7 @@ beads = []
 for i in range(5):
     beads.append(T.Bead(50, 50))
 
-for i in range(500):
+for i in range(1000):
     kernel.Profile(beads, img)
 
 print("--- %s seconds ---" % (time.time() - start))
