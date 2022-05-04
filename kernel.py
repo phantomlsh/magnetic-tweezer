@@ -4,24 +4,13 @@ ti.init(arch=ti.gpu)
 
 π = np.pi
 
-@ti.kernel
-def tiFillSPs():
-    fr = R/Nr
-    fθ = 2*π/Nθ
-    for r in range(Nr):
-        for θ in range(Nθ):
-            SPs[r, θ][0] = fr * r * ti.cos(θ * fθ)
-            SPs[r, θ][1] = fr * r * ti.sin(θ * fθ)
-
-def SetSamplePoint(r=40, nr=80, nθ=80):
-    global R, Nr, Nθ, SPs
+def SetParams(r=40, nr=80, nθ=80):
+    global R, Nr, Nθ, Fr, Fθ
     R = r
     Nr = nr
     Nθ = nθ
-    SPs = ti.Vector.field(n=2, dtype=ti.f32, shape=(nr,nθ))
-    tiFillSPs()
-
-SetSamplePoint()
+    Fr = R/Nr
+    Fθ = 2*π/Nθ
 
 @ti.kernel
 def tiBI(im: ti.types.ndarray(), ps: ti.types.ndarray(), res: ti.types.ndarray()):
@@ -31,8 +20,8 @@ def tiBI(im: ti.types.ndarray(), ps: ti.types.ndarray(), res: ti.types.ndarray()
         r = l % Nr # index of ring
         i = l // Nr # index of beads
         for θ in range(Nθ):
-            x = ps[i, 0] + SPs[r, θ][0]
-            y = ps[i, 1] + SPs[r, θ][1]
+            x = ps[i, 0] + Fr * r * ti.cos(θ * Fθ)
+            y = ps[i, 1] + Fr * r * ti.sin(θ * Fθ)
 
             x0 = int(x)
             y0 = int(y)

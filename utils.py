@@ -45,7 +45,8 @@ def Tilde(I, rf, w):
     return It[rf+(len(It)//2):len(It)]
 
 def HoughCircles(image, minRadius, maxRadius):
-    circles = cv.HoughCircles(image, cv.HOUGH_GRADIENT, 1, 50, param1=50, param2=30, minRadius=minRadius, maxRadius=maxRadius)
+    img = (image / image.max() * 255).astype("uint8")
+    circles = cv.HoughCircles(img, cv.HOUGH_GRADIENT, 1, 50, param1=50, param2=30, minRadius=minRadius, maxRadius=maxRadius)
     if (circles is None):
         return []
     return circles[0]

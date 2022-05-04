@@ -6,7 +6,6 @@ import T
 # parameters
 minRadius = 15
 maxRadius = 30
-T.Init()
 
 img = mm.Get()
 circles = utils.HoughCircles(img, minRadius, maxRadius)

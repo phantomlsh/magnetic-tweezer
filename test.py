@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import utils
+import mm
+
+mm.Get()
 
 x = np.arange(-5, 5)
 

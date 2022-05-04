@@ -11,16 +11,12 @@ Global params initialization
 @param nθ: sampling number in polar direction
 @param nr: sampling number in radial direction
 """
-def Init(r=40, nθ=80, nr=80):
-    global Nθ, Nr, R, sxs, sys
-    Nθ = nθ
-    Nr = nr
+def SetParams(r=40, nr=80, nθ=80):
+    global R
     R = r
-    rs = np.tile(np.arange(0, R, R/Nr), Nθ)
-    θs = np.repeat(np.arange(π/Nθ, 2*π, 2*π/Nθ), Nr)
-    # relative sample points
-    sxs = rs * np.cos(θs)
-    sys = rs * np.sin(θs)
+    kernel.SetParams(r, nr, nθ)
+
+SetParams()
 
 """
 Calculate XY Position
@@ -28,7 +24,7 @@ Calculate XY Position
 @param img: 2d array of image data
 @param it: iteration times
 """
-def XY(beads, img, it=3):
+def XY(beads, img, it=2):
     for b in beads:
         xl = int(b.x)
         yl = int(b.y)
@@ -83,8 +79,8 @@ def Z(beads, img):
             Φi = Φi - 2*π
         while Φi[5] - b.Φc[i][5] < -3:
             Φi = Φi + 2*π
-        ΔΦ = np.average(Φi-b.Φc, axis=1, weights=Ai*b.Ac)
-        p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ[i-3:i+4], 1)
+        ΔΦ = np.average(Φi-b.Φc[i-3:i+4], axis=1, weights=Ai*b.Ac[i-3:i+4])
+        p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 1)
         #plt.scatter(b.Zc, ΔΦ)
         b.z = -p[0]/p[1]
 
@@ -95,6 +91,7 @@ class Bead:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.z = 0
         # self calibration
         self.Ic = [] # Intensity Profiles
         self.Zc = [] # Z values

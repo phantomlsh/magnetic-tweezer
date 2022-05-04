@@ -4,8 +4,9 @@ import time
 import mm
 import T
 
-T.Init()
-beads = [T.Bead(507, 380), T.Bead(478, 458)]
+beads = [T.Bead(537, 383), T.Bead(506, 458)]
+for i in range(3):
+    beads.append(T.Bead(537, 383))
 T.XY(beads, mm.Get())
 
 def imgSet(n):
@@ -29,10 +30,6 @@ plt.title('Calibration R')
 plt.imshow(np.flip(beads[0].Rc, axis=0), cmap="gray")
 plt.show()
 
-plt.title('Calibration Phi')
-plt.imshow(np.flip(beads[0].Φc, axis=0), cmap="gray")
-plt.show()
-
 # test
 
 mm.SetZ(sz + 900)
@@ -51,6 +48,7 @@ mm.SetZ(sz + 900)
 # # plt.ylabel('Delta Phi')
 # # plt.show()
 
+start = time.time()
 zs = []
 for i in range(500):
     img = mm.Get()
@@ -58,11 +56,15 @@ for i in range(500):
     T.Z(beads, img)
     zs.append(beads[0].z - beads[1].z)
 
+print('time =', time.time() - start)
+
 plt.grid()
 plt.plot(zs, marker="o")
 plt.title('Delta Z between two beads')
 plt.xlabel('Frame')
 plt.ylabel('Delta Z(nm)')
 plt.show()
+
+print(np.std(zs))
 
 mm.SetZ(sz)
