@@ -7,7 +7,7 @@ import kernel
 
 π = np.pi
 
-img = np.ndarray((100, 100))
+img = np.ndarray((1000, 1000))
 x = 50
 y = 50
 
