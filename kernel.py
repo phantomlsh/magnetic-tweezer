@@ -20,8 +20,8 @@ def tiBI(ims: ti.types.ndarray(), ps: ti.types.ndarray(), res: ti.types.ndarray(
         r = l % Nr # index of ring
         i = l // Nr # index of beads
         for θ in range(Nθ):
-            x = ps[i, 0] + Fr * r * ti.cos(θ * Fθ) + R + 2
-            y = ps[i, 1] + Fr * r * ti.sin(θ * Fθ) + R + 2
+            x = ps[i, 0] + Fr * r * ti.cos(θ * Fθ) + R + 1
+            y = ps[i, 1] + Fr * r * ti.sin(θ * Fθ) + R + 1
 
             x0 = int(x)
             y0 = int(y)
@@ -54,7 +54,7 @@ def Profile(beads, img):
     for b in beads:
         x0 = int(b.x)
         y0 = int(b.y)
-        ims.append(img[y0-R-2:y0+R+2, x0-R-2:x0+R+2])
+        ims.append(img[y0-R-1:y0+R+1, x0-R-1:x0+R+1])
         ps.append([b.x-x0, b.y-y0])
     Is = np.zeros(Nr * n, dtype=np.float32)
     tiBI(np.array(ims, dtype=np.float32), np.array(ps, dtype=np.float32), Is)
