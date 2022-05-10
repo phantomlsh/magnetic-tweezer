@@ -12,11 +12,28 @@ Global params initialization
 @param nr: sampling number in radial direction
 """
 def SetParams(r=40, nr=80, nθ=80):
-    global R
+    global R, L, freq
     R = r
+    L = r * 2
+    freq = np.fft.rfftfreq(L*2)
     kernel.SetParams(r, nr, nθ)
 
 SetParams()
+
+# shift from the center
+def CenterShift(array, it=2):
+    normalized = 2 * array / np.max(array) - 1 # normalize
+    fft = np.fft.rfft(np.append(normalized, np.zeros(L)))
+    res = 0
+    d = 0
+    for loop in range(it):
+        fft *= np.exp(2j*π*d*freq)
+        co = np.fft.irfft(fft**2)[R-1:L+R-1]
+        i = np.argmax(co[R-30:R+30]) + R-30
+        p = np.polynomial.polynomial.polyfit(np.arange(i-2, i+3), co[i-2:i+3], 2)
+        d = -p[1]/4/p[2] - R/2
+        res += d
+    return res
 
 """
 Calculate XY Position
@@ -30,8 +47,8 @@ def XY(beads, img, it=2):
         yl = int(b.y)
         xline = np.sum(img[yl-2:yl+3, xl-R:xl+R], axis=0)
         yline = np.sum(img[yl-R:yl+R, xl-2:xl+3], axis=1)
-        b.x = xl + utils.SymmetryCenter(xline, it)
-        b.y = yl + utils.SymmetryCenter(yline, it)
+        b.x = xl + CenterShift(xline, it)
+        b.y = yl + CenterShift(yline, it)
 
 """
 Calculate I and store
