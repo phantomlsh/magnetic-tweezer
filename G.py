@@ -1,5 +1,4 @@
 import numpy as np
-import utils
 import kernel
 import matplotlib.pyplot as plt
 
@@ -21,7 +20,7 @@ def SetParams(r=40, nr=80, nθ=80):
 SetParams()
 
 # shift from the center
-def CenterShift(array, it=2):
+def centerShift(array, it=2):
     normalized = 2 * array / np.max(array) - 1 # normalize
     fft = np.fft.rfft(np.append(normalized, np.zeros(L)))
     res = 0
@@ -35,6 +34,17 @@ def CenterShift(array, it=2):
         res += d
     return res
 
+def tilde(I, rf, w):
+    I = 2 * I / np.max(I) - 1 # normalize to [-1, 1]
+    I = np.append(np.flip(I), I)
+    Iq = np.fft.fft(I)
+    q = np.fft.fftfreq(I.shape[-1])
+    l = len(Iq)
+    win = np.append(np.zeros(w[0]), np.hanning(w[1]-w[0]))
+    win = np.append(win, np.zeros(l-w[1]))
+    It = np.fft.ifft(Iq*win)
+    return It[rf+(len(It)//2):len(It)]
+
 """
 Calculate XY Position
 @param beads: list of beads
@@ -47,8 +57,8 @@ def XY(beads, img, it=2):
         yl = int(b.y)
         xline = np.sum(img[yl-2:yl+3, xl-R:xl+R], axis=0)
         yline = np.sum(img[yl-R:yl+R, xl-2:xl+3], axis=1)
-        b.x = xl + CenterShift(xline, it)
-        b.y = yl + CenterShift(yline, it)
+        b.x = xl + centerShift(xline, it)
+        b.y = yl + centerShift(yline, it)
 
 """
 Calculate I and store
@@ -82,7 +92,7 @@ def ComputeCalibration(beads, rf=12, w=[5, 15]):
         b.Φc = [] # phase angle
         b.Ac = [] # amplitude
         for I in b.Ic:
-            It = utils.Tilde(I, rf, w)
+            It = tilde(I, rf, w)
             b.Rc.append(np.real(It))
             b.Φc.append(np.angle(It))
             b.Ac.append(np.abs(It))
@@ -97,7 +107,7 @@ Calculate Z Position
 def Z(beads, img):
     kernel.Profile(beads, img)
     for b in beads:
-        It = utils.Tilde(b.profile, b.rf, b.w)
+        It = tilde(b.profile, b.rf, b.w)
         Ri = np.real(It)
         Φi = np.unwrap(np.angle(It))
         Ai = np.abs(It)

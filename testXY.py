@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import time, mm, utils
 import G, C
 
-T = C
+T = G
 beads = []
 
 xss = []
