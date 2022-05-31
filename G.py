@@ -68,6 +68,12 @@ def Calibrate(beads, imgs, z):
         b.Ic.append(np.average(b.l, axis=0))
         b.Zc.append(z)
 
+"""
+Finalize calibration by computing phase etc.
+@param beads: list of beads
+@param rf: forget radius
+@param w: [a, b] window in Fourier space
+"""
 def ComputeCalibration(beads, rf=12, w=[5, 15]):
     for b in beads:
         b.rf = rf
@@ -83,6 +89,11 @@ def ComputeCalibration(beads, rf=12, w=[5, 15]):
         b.Φc = np.unwrap(b.Φc, axis=0)
         b.Φc = np.unwrap(b.Φc, axis=1)
 
+"""
+Calculate Z Position
+@param beads: list of beads
+@param img: 2d array of image data
+"""
 def Z(beads, img):
     kernel.Profile(beads, img)
     for b in beads:
