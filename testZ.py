@@ -1,12 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import time
-import mm
-import T
+import time, mm, utils
+import T as T
 
-beads = [T.Bead(510, 383), T.Bead(481, 457)]
-for i in range(3):
-    beads.append(T.Bead(510, 383))
+beads = []
+
+circles = utils.HoughCircles(mm.Get(), 15, 30)
+for c in circles:
+    if (c[0] > 80 and c[0] < 680 and c[1] > 80 and c[1] < 500):
+        beads.append(T.Bead(c[0], c[1]))
+
+n = len(beads)
+print(n, "Beads:", beads)
+
 T.XY(beads, mm.Get())
 
 def imgSet(n):

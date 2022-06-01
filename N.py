@@ -1,46 +1,7 @@
 import numpy as np
-import taichi as ti
 import matplotlib.pyplot as plt
 
-ti.init(arch=ti.gpu)
-
-maxN = 100
 π = np.pi
-
-im = ti.field(dtype=ti.i32, shape=(1000, 1000))
-ps = ti.Vector.field(dtype=ti.f32, n=2, shape=(maxN))
-Is = ti.field(dtype=ti.f32, shape=(maxN, 100))
-
-@ti.kernel
-def tiBI(n: ti.i32):
-    for i, r in ti.ndrange(n, Nr):
-        Is[i, r] = 0
-        for θ in range(Nθ):
-            x = ps[i][0] + Fr * r * ti.cos(θ * Fθ)
-            y = ps[i][1] + Fr * r * ti.sin(θ * Fθ)
-            x0 = int(x)
-            y0 = int(y)
-            x1 = x0 + 1
-            y1 = y0 + 1
-            xu = x1 - x
-            xl = x - x0
-            yu = y1 - y
-            yl = y - y0
-            Is[i, r] += (xu*yu*im[y0, x0] + xu*yl*im[y1, x0] + xl*yu*im[y0, x1] + xl*yl*im[y1, x1]) / Nθ
-
-def profile(beads, img):
-    global im
-    if (im.shape[0] != img.shape[0] or im.shape[1] != img.shape[1]):
-        im = ti.field(dtype=ti.i32, shape=(img.shape[0], img.shape[1]))
-    im.from_numpy(img.astype(int))
-    n = len(beads)
-    for i in range(n):
-        ps[i][0] = beads[i].x
-        ps[i][1] = beads[i].y
-    tiBI(n)
-    res = Is.to_numpy()
-    for i in range(n):
-        beads[i].profile = res[i]
 
 """
 Global params initialization
@@ -49,23 +10,23 @@ Global params initialization
 @param nr: sampling number in radial direction
 """
 def SetParams(r=40, nr=80, nθ=80):
-    global R, L, freq, Nr, Nθ, Fr, Fθ, ps, Is
+    global R, L, freq, Nr, Nθ, sxs, sys
     R = r
     L = r * 2
-    freq = np.fft.rfftfreq(L*2)
-    R = r
     Nr = nr
     Nθ = nθ
-    Fr = R/Nr
-    Fθ = 2*π/Nθ
-    ps = ti.Vector.field(dtype=ti.f32, n=2, shape=(maxN))
-    Is = ti.field(dtype=ti.f32, shape=(maxN, Nr))
+    freq = np.fft.rfftfreq(L*2)
+    rs = np.tile(np.arange(0, R, R/nr), nθ)
+    θs = np.repeat(np.arange(π/nθ, 2*π, 2*π/nθ), nr)
+    # relative sample points
+    sxs = rs * np.cos(θs)
+    sys = rs * np.sin(θs)
 
 SetParams()
 
 # shift from the center
 def centerShift(array, it=2):
-    normalized = 2 * array / np.max(array) - 1 # normalize
+    normalized = 2 * array / np.max(array) - 1
     fft = np.fft.rfft(np.append(normalized, np.zeros(L)))
     res = 0
     d = 0
@@ -77,6 +38,22 @@ def centerShift(array, it=2):
         d = -p[1]/4/p[2] - R/2
         res += d
     return res
+
+# Cannot deal with boundary, avoid boundary
+def bilinearInterpolate(im, x, y):
+    x0 = x.astype(int)
+    y0 = y.astype(int)
+    x1 = x0 + 1
+    y1 = y0 + 1
+    xu = x1 - x
+    xl = x - x0
+    yu = y1 - y
+    yl = y - y0
+    return xu*yu*im[y0, x0] + xu*yl*im[y1, x0] + xl*yu*im[y0, x1] + xl*yl*im[y1, x1]
+
+def profile(beads, img):
+    for b in beads:
+        b.profile = np.average(bilinearInterpolate(img, sxs + b.x, sys + b.y).reshape((Nθ, Nr)), axis=0)
 
 def tilde(I, rf, w):
     I = 2 * I / np.max(I) - 1 # normalize to [-1, 1]

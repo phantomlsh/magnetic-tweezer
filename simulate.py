@@ -2,7 +2,7 @@ from math import sqrt, cos, floor, pi as π
 import random
 
 def Generate(X, Y, Z, λ, img):
-  L = img.shape[0]
+  L = 100
   for x in range(L):
     for y in range(L):
       r = sqrt((x-X)**2 + (y-Y)**2 + Z**2)
