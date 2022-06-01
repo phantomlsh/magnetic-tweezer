@@ -1,20 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import utils
-import mm
+import time, mm, utils
+import T as T
 
-mm.Get()
+beads = []
 
-x = np.arange(-5, 5)
+circles = utils.HoughCircles(mm.Get(), 15, 30)
+for c in circles:
+    if (c[0] > 80 and c[0] < 680 and c[1] > 80 and c[1] < 500):
+        beads.append(T.Bead(c[0], c[1]))
 
-ds = np.arange(-3, 3, 0.01)
-bias = []
+n = len(beads)
+print(n, "Beads:", beads)
 
-for d in ds:
-    y = np.cos((x-d)/10)
-    p = np.polynomial.polynomial.polyfit(x, y, 2)
-    bias.append(-p[1]/(2*p[2]) - d)
-
-plt.plot(ds, bias)
-plt.grid()
-plt.show()
+T.test(beads, mm.Get())

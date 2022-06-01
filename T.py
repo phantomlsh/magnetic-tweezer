@@ -4,43 +4,8 @@ import matplotlib.pyplot as plt
 
 ti.init(arch=ti.gpu)
 
-maxN = 100
+maxN = 20
 π = np.pi
-
-im = ti.field(dtype=ti.i32, shape=(1000, 1000))
-ps = ti.Vector.field(dtype=ti.f32, n=2, shape=(maxN))
-Is = ti.field(dtype=ti.f32, shape=(maxN, 100))
-
-@ti.kernel
-def tiBI(n: ti.i32):
-    for i, r in ti.ndrange(n, Nr):
-        Is[i, r] = 0
-        for θ in range(Nθ):
-            x = ps[i][0] + Fr * r * ti.cos(θ * Fθ)
-            y = ps[i][1] + Fr * r * ti.sin(θ * Fθ)
-            x0 = int(x)
-            y0 = int(y)
-            x1 = x0 + 1
-            y1 = y0 + 1
-            xu = x1 - x
-            xl = x - x0
-            yu = y1 - y
-            yl = y - y0
-            Is[i, r] += (xu*yu*im[y0, x0] + xu*yl*im[y1, x0] + xl*yu*im[y0, x1] + xl*yl*im[y1, x1]) / Nθ
-
-def profile(beads, img):
-    global im
-    if (im.shape[0] != img.shape[0] or im.shape[1] != img.shape[1]):
-        im = ti.field(dtype=ti.i32, shape=(img.shape[0], img.shape[1]))
-    im.from_numpy(img.astype(int))
-    n = len(beads)
-    for i in range(n):
-        ps[i][0] = beads[i].x
-        ps[i][1] = beads[i].y
-    tiBI(n)
-    res = Is.to_numpy()
-    for i in range(n):
-        beads[i].profile = res[i]
 
 """
 Global params initialization
@@ -48,8 +13,8 @@ Global params initialization
 @param nθ: sampling number in polar direction
 @param nr: sampling number in radial direction
 """
-def SetParams(r=40, nr=80, nθ=80):
-    global R, L, freq, Nr, Nθ, Fr, Fθ, ps, Is
+def SetParams(r=40, nr=80, nθ=80, maxn=maxN):
+    global R, L, freq, Nr, Nθ, Fr, Fθ
     R = r
     L = r * 2
     freq = np.fft.rfftfreq(L*2)
@@ -58,10 +23,71 @@ def SetParams(r=40, nr=80, nθ=80):
     Nθ = nθ
     Fr = R/Nr
     Fθ = 2*π/Nθ
-    ps = ti.Vector.field(dtype=ti.f32, n=2, shape=(maxN))
-    Is = ti.field(dtype=ti.f32, shape=(maxN, Nr))
+    global _im, _p, _I, _x, _X
+    _im = ti.field(dtype=ti.i32, shape=(1000, 1000)) # img data
+    _p = ti.Vector.field(dtype=ti.f32, n=2, shape=(maxn)) # points
+    _I = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # intensity
+    _x = ti.field(dtype=ti.f32, shape=(2*maxn, 2*R)) # cache for real space
+    _X = ti.Vector.field(dtype=ti.f32, n=2, shape=(2*maxn, 4*R)) # cache for fourier space
 
 SetParams()
+
+@ti.kernel
+def tiCore(n: int):
+    # slice
+    for i, t in ti.ndrange(n, 2*R):
+        x0 = int(_p[i][0])
+        y0 = int(_p[i][1])
+        x = x0+t-R
+        y = y0+t-R
+        _x[2*i, t] = _im[y0-2, x] + _im[y0-1, x] + _im[y0, x] + _im[y0+1, x] + _im[y0+2, x]
+        _x[2*i+1, t] = _im[y, x0-2] + _im[y, x0-1] + _im[y, x0] + _im[y, x0+1] + _im[y, x0+2]
+    # Fourier transform
+
+def test(beads, img):
+    global _im
+    if (_im.shape[0] != img.shape[0] or _im.shape[1] != img.shape[1]):
+        _im = ti.field(dtype=ti.i32, shape=(img.shape[0], img.shape[1]))
+    _im.from_numpy(img.astype(int))
+    n = len(beads)
+    for i in range(n):
+        _p[i][0] = beads[i].x
+        _p[i][1] = beads[i].y
+    tiCore(n)
+    res = _x.to_numpy()
+    plt.plot(res[0])
+    plt.show()
+
+@ti.kernel
+def tiBI(n: ti.i32):
+    for i, r in ti.ndrange(n, Nr):
+        _I[i, r] = 0
+    for i, r, θ in ti.ndrange(n, Nr, Nθ):
+        x = _p[i][0] + Fr * r * ti.cos(θ * Fθ)
+        y = _p[i][1] + Fr * r * ti.sin(θ * Fθ)
+        x0 = int(x)
+        y0 = int(y)
+        x1 = x0 + 1
+        y1 = y0 + 1
+        xu = x1 - x
+        xl = x - x0
+        yu = y1 - y
+        yl = y - y0
+        _I[i, r] += (xu*yu*_im[y0, x0] + xu*yl*_im[y1, x0] + xl*yu*_im[y0, x1] + xl*yl*_im[y1, x1]) / Nθ
+
+def profile(beads, img):
+    global _im
+    if (_im.shape[0] != img.shape[0] or _im.shape[1] != img.shape[1]):
+        _im = ti.field(dtype=ti.i32, shape=(img.shape[0], img.shape[1]))
+    _im.from_numpy(img.astype(int))
+    n = len(beads)
+    for i in range(n):
+        _p[i][0] = beads[i].x
+        _p[i][1] = beads[i].y
+    tiBI(n)
+    res = _I.to_numpy()
+    for i in range(n):
+        beads[i].profile = res[i]
 
 # shift from the center
 def centerShift(array, it=2):
