@@ -1,8 +1,46 @@
 import numpy as np
-import kernel
+import taichi as ti
 import matplotlib.pyplot as plt
 
+ti.init(arch=ti.gpu)
+
+maxN = 100
 π = np.pi
+
+im = ti.field(dtype=ti.i32, shape=(1000, 1000))
+ps = ti.Vector.field(dtype=ti.f32, n=2, shape=(maxN))
+Is = ti.field(dtype=ti.f32, shape=(maxN, 100))
+
+@ti.kernel
+def tiBI(n: ti.i32):
+    for i, r in ti.ndrange(n, Nr):
+        Is[i, r] = 0
+        for θ in range(Nθ):
+            x = ps[i][0] + Fr * r * ti.cos(θ * Fθ)
+            y = ps[i][1] + Fr * r * ti.sin(θ * Fθ)
+            x0 = int(x)
+            y0 = int(y)
+            x1 = x0 + 1
+            y1 = y0 + 1
+            xu = x1 - x
+            xl = x - x0
+            yu = y1 - y
+            yl = y - y0
+            Is[i, r] += (xu*yu*im[y0, x0] + xu*yl*im[y1, x0] + xl*yu*im[y0, x1] + xl*yl*im[y1, x1]) / Nθ
+
+def profile(beads, img):
+    global im
+    if (im.shape[0] != img.shape[0] or im.shape[1] != img.shape[1]):
+        im = ti.field(dtype=ti.i32, shape=(img.shape[0], img.shape[1]))
+    im.from_numpy(img.astype(int))
+    n = len(beads)
+    for i in range(n):
+        ps[i][0] = beads[i].x
+        ps[i][1] = beads[i].y
+    tiBI(n)
+    res = Is.to_numpy()
+    for i in range(n):
+        beads[i].profile = res[i]
 
 """
 Global params initialization
@@ -11,11 +49,17 @@ Global params initialization
 @param nr: sampling number in radial direction
 """
 def SetParams(r=40, nr=80, nθ=80):
-    global R, L, freq
+    global R, L, freq, Nr, Nθ, Fr, Fθ, ps, Is
     R = r
     L = r * 2
     freq = np.fft.rfftfreq(L*2)
-    kernel.SetParams(r, nr, nθ)
+    R = r
+    Nr = nr
+    Nθ = nθ
+    Fr = R/Nr
+    Fθ = 2*π/Nθ
+    ps = ti.Vector.field(dtype=ti.f32, n=2, shape=(maxN))
+    Is = ti.field(dtype=ti.f32, shape=(maxN, Nr))
 
 SetParams()
 
@@ -71,7 +115,7 @@ def Calibrate(beads, imgs, z):
         b.l = []
     for img in imgs:
         XY(beads, img)
-        kernel.Profile(beads, img)
+        profile(beads, img)
         for b in beads:
             b.l.append(b.profile)
     for b in beads:
@@ -105,7 +149,7 @@ Calculate Z Position
 @param img: 2d array of image data
 """
 def Z(beads, img):
-    kernel.Profile(beads, img)
+    profile(beads, img)
     for b in beads:
         It = tilde(b.profile, b.rf, b.w)
         Ri = np.real(It)

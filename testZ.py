@@ -1,9 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time, mm, utils
-import G, C
+import T as T
 
-T = C
 beads = []
 
 circles = utils.HoughCircles(mm.Get(), 15, 30)
