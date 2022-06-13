@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 ti.init(arch=ti.gpu)
 
-maxN = 20
+maxN = 30
 π = np.pi
 
 """
@@ -23,26 +23,82 @@ def SetParams(r=40, nr=80, nθ=80, maxn=maxN):
     Nθ = nθ
     Fr = R/Nr
     Fθ = 2*π/Nθ
-    global _im, _p, _I, _x, _X
+    global _im, _p, _I, _x, _y, _cx, _cy
     _im = ti.field(dtype=ti.i32, shape=(1000, 1000)) # img data
     _p = ti.Vector.field(dtype=ti.f32, n=2, shape=(maxn)) # points
     _I = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # intensity
-    _x = ti.field(dtype=ti.f32, shape=(2*maxn, 2*R)) # cache for real space
-    _X = ti.Vector.field(dtype=ti.f32, n=2, shape=(2*maxn, 4*R)) # cache for fourier space
+    # caches
+    _x = ti.field(dtype=ti.f32, shape=(maxn, 2*R))
+    _y = ti.field(dtype=ti.f32, shape=(maxn, 2*R))
+    _cx = ti.field(dtype=ti.f32, shape=(maxn, 30))
+    _cy = ti.field(dtype=ti.f32, shape=(maxn, 30))
 
 SetParams()
 
+@ti.func
+def tiBI(x: ti.f32, y: ti.f32) -> ti.f32:
+    x0 = int(x)
+    y0 = int(y)
+    x1 = x0 + 1
+    y1 = y0 + 1
+    xu = x1 - x
+    xl = x - x0
+    yu = y1 - y
+    yl = y - y0
+    return xu*yu*_im[y0, x0] + xu*yl*_im[y1, x0] + xl*yu*_im[y0, x1] + xl*yl*_im[y1, x1]
+
+@ti.func
+def tiFitCenter(y0: ti.f32, y1: ti.f32, y2: ti.f32, y3: ti.f32, y4: ti.f32) -> ti.f32:
+    a = (2*y0 - y1 - 2*y2 - y3 + 2*y4) / 14
+    b = -0.2*y0 - 0.1*y1 + 0.1*y3 + 0.2*y4
+    return -b/a/2
+
+@ti.func
+def tiXY(n: int):
+    for i, t in ti.ndrange(n, (-R, R)): # sample slice
+        x = _p[i][0]
+        y = _p[i][1]
+        _x[i, t+R] = tiBI(x + t, y - 1) + tiBI(x + t, y) + tiBI(x + t, y + 1)
+        _y[i, t+R] = tiBI(x - 1, y + t) + tiBI(x, y + t) + tiBI(x + 1, y + t)
+    for i in range(n): # find max and min, serialized
+        maxx = 0.0
+        maxy = 0.0
+        minx = 999.0
+        miny = 999.0
+        for t in range(2*R):
+            if (_x[i, t] > maxx):
+                maxx = _x[i, t]
+            if (_y[i, t] > maxy):
+                maxy = _y[i, t]
+            if (_x[i, t] < minx):
+                minx = _x[i, t]
+            if (_y[i, t] < miny):
+                miny = _y[i, t]
+        for t in range(2*R):
+            _x[i, t] = (_x[i, t] - minx) * 2 / (maxx - minx) - 1
+            _y[i, t] = (_y[i, t] - miny) * 2 / (maxy - miny) - 1
+    # correlate
+    for i, k in ti.ndrange(n, 30):
+        _cx[i, k] = 0
+        _cy[i, k] = 0
+    for i, k, l in ti.ndrange(n, 30, 2*R):
+        _cx[i, k] += _x[i, l] * _x[i, k - l + L - 16]
+        _cy[i, k] += _y[i, l] * _y[i, k - l + L - 16]
+    for i in range(n): # find max in correlate and fit
+        x = 15
+        y = 15
+        for t in range(30):
+            if _cx[i, t] > _cx[i, x]:
+                x = t
+            if _cy[i, t] > _cy[i, y]:
+                y = t
+        _p[i][0] += (x - 15 + tiFitCenter(_cx[i, x-2], _cx[i, x-1], _cx[i, x], _cx[i, x+1], _cx[i, x+2])) / 2
+        _p[i][1] += (y - 15 + tiFitCenter(_cy[i, y-2], _cy[i, y-1], _cy[i, y], _cy[i, y+1], _cy[i, y+2])) / 2
+
 @ti.kernel
 def tiCore(n: int):
-    # slice
-    for i, t in ti.ndrange(n, 2*R):
-        x0 = int(_p[i][0])
-        y0 = int(_p[i][1])
-        x = x0+t-R
-        y = y0+t-R
-        _x[2*i, t] = _im[y0-2, x] + _im[y0-1, x] + _im[y0, x] + _im[y0+1, x] + _im[y0+2, x]
-        _x[2*i+1, t] = _im[y, x0-2] + _im[y, x0-1] + _im[y, x0] + _im[y, x0+1] + _im[y, x0+2]
-    # Fourier transform
+    tiXY(n)
+    tiXY(n)
 
 def test(beads, img):
     global _im
@@ -54,26 +110,19 @@ def test(beads, img):
         _p[i][0] = beads[i].x
         _p[i][1] = beads[i].y
     tiCore(n)
-    res = _x.to_numpy()
-    plt.plot(res[0])
-    plt.show()
+    p = _p.to_numpy()
+    for i in range(n):
+        beads[i].x = p[i][0]
+        beads[i].y = p[i][1]
 
 @ti.kernel
-def tiBI(n: ti.i32):
+def tiProfile(n: ti.i32):
     for i, r in ti.ndrange(n, Nr):
         _I[i, r] = 0
     for i, r, θ in ti.ndrange(n, Nr, Nθ):
         x = _p[i][0] + Fr * r * ti.cos(θ * Fθ)
         y = _p[i][1] + Fr * r * ti.sin(θ * Fθ)
-        x0 = int(x)
-        y0 = int(y)
-        x1 = x0 + 1
-        y1 = y0 + 1
-        xu = x1 - x
-        xl = x - x0
-        yu = y1 - y
-        yl = y - y0
-        _I[i, r] += (xu*yu*_im[y0, x0] + xu*yl*_im[y1, x0] + xl*yu*_im[y0, x1] + xl*yl*_im[y1, x1]) / Nθ
+        _I[i, r] += tiBI(x, y) / Nθ
 
 def profile(beads, img):
     global _im
@@ -84,7 +133,7 @@ def profile(beads, img):
     for i in range(n):
         _p[i][0] = beads[i].x
         _p[i][1] = beads[i].y
-    tiBI(n)
+    tiProfile(n)
     res = _I.to_numpy()
     for i in range(n):
         beads[i].profile = res[i]

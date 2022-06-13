@@ -15,12 +15,14 @@ for c in circles:
 n = len(beads)
 print(n, "Beads:", beads)
 
+T.test(beads, mm.Get())
+
 ts = []
 start = time.time()
 for loop in range(1000):
     img = mm.Get()
     ts.append(time.time() - start)
-    T.XY(beads, img)
+    T.test(beads, img)
     for i in range(n):
         xss[i].append(beads[i].x)
 
