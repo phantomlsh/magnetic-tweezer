@@ -99,59 +99,12 @@ def tiXY(n: int):
 def tiCore(n: int):
     tiXY(n)
     tiXY(n)
-
-def test(beads, img):
-    global _im
-    if (_im.shape[0] != img.shape[0] or _im.shape[1] != img.shape[1]):
-        _im = ti.field(dtype=ti.i32, shape=(img.shape[0], img.shape[1]))
-    _im.from_numpy(img.astype(int))
-    n = len(beads)
-    for i in range(n):
-        _p[i][0] = beads[i].x
-        _p[i][1] = beads[i].y
-    tiCore(n)
-    p = _p.to_numpy()
-    for i in range(n):
-        beads[i].x = p[i][0]
-        beads[i].y = p[i][1]
-
-@ti.kernel
-def tiProfile(n: ti.i32):
     for i, r in ti.ndrange(n, Nr):
         _I[i, r] = 0
     for i, r, θ in ti.ndrange(n, Nr, Nθ):
         x = _p[i][0] + Fr * r * ti.cos(θ * Fθ)
         y = _p[i][1] + Fr * r * ti.sin(θ * Fθ)
         _I[i, r] += tiBI(x, y) / Nθ
-
-def profile(beads, img):
-    global _im
-    if (_im.shape[0] != img.shape[0] or _im.shape[1] != img.shape[1]):
-        _im = ti.field(dtype=ti.i32, shape=(img.shape[0], img.shape[1]))
-    _im.from_numpy(img.astype(int))
-    n = len(beads)
-    for i in range(n):
-        _p[i][0] = beads[i].x
-        _p[i][1] = beads[i].y
-    tiProfile(n)
-    res = _I.to_numpy()
-    for i in range(n):
-        beads[i].profile = res[i]
-
-# shift from the center
-def centerShift(array, it=2):
-    normalized = 2 * array / np.max(array) - 1 # normalize
-    fft = np.fft.rfft(np.append(normalized, np.zeros(L)))
-    res = 0
-    d = 0
-    for loop in range(it):
-        fft *= np.exp(2j*π*d*freq)
-        co = np.fft.irfft(fft**2)[R-1:L+R-1]
-        i = np.argmax(co[R-30:R+30]) + R-30
-        p = np.polynomial.polynomial.polyfit(np.arange(i-2, i+3), co[i-2:i+3], 2)
-        d = -p[1]/4/p[2] - R/2
-        res += d
-    return res
 
 def tilde(I, rf, w):
     I = 2 * I / np.max(I) - 1 # normalize to [-1, 1]
@@ -168,16 +121,23 @@ def tilde(I, rf, w):
 Calculate XY Position
 @param beads: list of beads
 @param img: 2d array of image data
-@param it: iteration times
 """
-def XY(beads, img, it=2):
-    for b in beads:
-        xl = int(b.x)
-        yl = int(b.y)
-        xline = np.sum(img[yl-2:yl+3, xl-R:xl+R], axis=0)
-        yline = np.sum(img[yl-R:yl+R, xl-2:xl+3], axis=1)
-        b.x = xl + centerShift(xline, it)
-        b.y = yl + centerShift(yline, it)
+def XY(beads, img):
+    global _im
+    if (_im.shape[0] != img.shape[0] or _im.shape[1] != img.shape[1]):
+        _im = ti.field(dtype=ti.i32, shape=(img.shape[0], img.shape[1]))
+    _im.from_numpy(img.astype(int))
+    n = len(beads)
+    for i in range(n):
+        _p[i][0] = beads[i].x
+        _p[i][1] = beads[i].y
+    tiCore(n)
+    p = _p.to_numpy()
+    I = _I.to_numpy()
+    for i in range(n):
+        beads[i].x = p[i][0]
+        beads[i].y = p[i][1]
+        beads[i].profile = I[i]
 
 """
 Calculate I and store
@@ -190,7 +150,6 @@ def Calibrate(beads, imgs, z):
         b.l = []
     for img in imgs:
         XY(beads, img)
-        profile(beads, img)
         for b in beads:
             b.l.append(b.profile)
     for b in beads:
@@ -224,7 +183,6 @@ Calculate Z Position
 @param img: 2d array of image data
 """
 def Z(beads, img):
-    profile(beads, img)
     for b in beads:
         It = tilde(b.profile, b.rf, b.w)
         Ri = np.real(It)
