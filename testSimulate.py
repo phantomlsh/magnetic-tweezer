@@ -1,29 +1,45 @@
 import numpy as np
-import taichi as ti
 import time
 import simulate
 import matplotlib.pyplot as plt
-import T as T
+import T as _T
+import N as N
 
 img = np.ndarray((700, 756))
 simulate.Generate(50, 50, 50, 4, img)
 
-beads = []
-for i in range(10):
-    beads.append(T.Bead(50, 50))
+maxn = 20
 
-T.XY(beads, img)
-# plt.plot(beads[0].profile)
-# plt.show()
+def run():
+    ts = []
+    for loop in range(1, maxn):
+        beads = []
+        for i in range(loop):
+            beads.append(T.Bead(50, 50))
 
-T.Calibrate(beads, [img], 0)
-T.Calibrate(beads, [img], 1)
-T.Calibrate(beads, [img], 4)
+        T.XY(beads, img)
+        # plt.plot(beads[0].profile)
+        # plt.show()
 
-T.ComputeCalibration(beads)
+        T.Calibrate(beads, [img], 0)
+        T.Calibrate(beads, [img], 1)
+        T.Calibrate(beads, [img], 4)
 
-start = time.time()
-for i in range(1000):
-    T.XY(beads, img)
-    T.Z(beads, img)
-print("--- %s seconds ---" % (time.time() - start))
+        T.ComputeCalibration(beads)
+
+        start = time.time()
+        for i in range(100):
+            T.XY(beads, img)
+            T.Z(beads, img)
+        ts.append(time.time() - start)
+        beads.append(T.Bead(50, 50))
+
+    plt.plot(ts)
+    print(np.polynomial.polynomial.polyfit(range(1, maxn), ts, 1))
+
+T = _T
+run()
+T = N
+run()
+
+plt.show()
