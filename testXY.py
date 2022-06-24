@@ -15,6 +15,8 @@ for c in circles:
 n = len(beads)
 print(n, "Beads:", beads)
 
+T.XY(beads, mm.Get())
+
 ts = []
 start = time.time()
 for loop in range(1000):
