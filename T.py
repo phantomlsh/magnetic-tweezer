@@ -96,7 +96,7 @@ def tiXY(n: int):
         _p[i][1] += (y - 15 + tiFitCenter(_cy[i, y-2], _cy[i, y-1], _cy[i, y], _cy[i, y+1], _cy[i, y+2])) / 2
 
 @ti.kernel
-def tiCore(n: int):
+def tiProfile(n: int):
     tiXY(n)
     tiXY(n)
     for i, r in ti.ndrange(n, Nr):
@@ -116,7 +116,7 @@ def tiCore(n: int):
         for r in range(Nr): # normalize intensity profile
             _I[i, r] = (_I[i, r] - minI) * 2 / (maxI - minI) - 1   
 
-def tilde(I, rf, w):
+def tilde(I, w):
     I = np.append(np.flip(I), I)
     Iq = np.fft.fft(I)
     q = np.fft.fftfreq(I.shape[-1])
@@ -124,7 +124,7 @@ def tilde(I, rf, w):
     win = np.append(np.zeros(w[0]), np.hanning(w[1]-w[0]))
     win = np.append(win, np.zeros(l-w[1]))
     It = np.fft.ifft(Iq*win)
-    return It[rf+(len(It)//2):len(It)]
+    return It[Rf+(len(It)//2):len(It)]
 
 """
 Calculate XY Position
@@ -140,7 +140,7 @@ def XY(beads, img):
     for i in range(n):
         _p[i][0] = beads[i].x
         _p[i][1] = beads[i].y
-    tiCore(n)
+    tiProfile(n)
     p = _p.to_numpy()
     I = _I.to_numpy()
     for i in range(n):
@@ -172,14 +172,15 @@ Finalize calibration by computing phase etc.
 @param w: [a, b] window in Fourier space
 """
 def ComputeCalibration(beads, rf=12, w=[5, 15]):
+    global Rf
+    Rf = rf
     for b in beads:
-        b.rf = rf
         b.w = w
         b.Rc = [] # real part
         b.Φc = [] # phase angle
         b.Ac = [] # amplitude
         for I in b.Ic:
-            It = tilde(I, rf, w)
+            It = tilde(I, w)
             b.Rc.append(np.real(It))
             b.Φc.append(np.angle(It))
             b.Ac.append(np.abs(It))
@@ -193,7 +194,7 @@ Calculate Z Position
 """
 def Z(beads, img):
     for b in beads:
-        It = tilde(b.profile, b.rf, b.w)
+        It = tilde(b.profile, b.w)
         Ri = np.real(It)
         Φi = np.unwrap(np.angle(It))
         Ai = np.abs(It)

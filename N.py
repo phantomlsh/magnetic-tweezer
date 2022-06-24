@@ -55,7 +55,7 @@ def profile(beads, img):
     for b in beads:
         b.profile = np.average(bilinearInterpolate(img, sxs + b.x, sys + b.y).reshape((Nθ, Nr)), axis=0)
 
-def tilde(I, rf, w):
+def tilde(I, w):
     I = 2 * I / np.max(I) - 1 # normalize to [-1, 1]
     I = np.append(np.flip(I), I)
     Iq = np.fft.fft(I)
@@ -64,7 +64,7 @@ def tilde(I, rf, w):
     win = np.append(np.zeros(w[0]), np.hanning(w[1]-w[0]))
     win = np.append(win, np.zeros(l-w[1]))
     It = np.fft.ifft(Iq*win)
-    return It[rf+(len(It)//2):len(It)]
+    return It[Rf+(len(It)//2):len(It)]
 
 """
 Calculate XY Position
@@ -106,14 +106,15 @@ Finalize calibration by computing phase etc.
 @param w: [a, b] window in Fourier space
 """
 def ComputeCalibration(beads, rf=12, w=[5, 15]):
+    global Rf
+    Rf = rf
     for b in beads:
-        b.rf = rf
         b.w = w
         b.Rc = [] # real part
         b.Φc = [] # phase angle
         b.Ac = [] # amplitude
         for I in b.Ic:
-            It = tilde(I, rf, w)
+            It = tilde(I, w)
             b.Rc.append(np.real(It))
             b.Φc.append(np.angle(It))
             b.Ac.append(np.abs(It))
@@ -128,7 +129,7 @@ Calculate Z Position
 def Z(beads, img):
     profile(beads, img)
     for b in beads:
-        It = tilde(b.profile, b.rf, b.w)
+        It = tilde(b.profile, b.w)
         Ri = np.real(It)
         Φi = np.unwrap(np.angle(It))
         Ai = np.abs(It)
@@ -140,7 +141,6 @@ def Z(beads, img):
             Φi = Φi + 2*π
         ΔΦ = np.average(Φi-b.Φc[i-3:i+4], axis=1, weights=Ai*b.Ac[i-3:i+4])
         p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 1)
-        #plt.scatter(b.Zc, ΔΦ)
         b.z = -p[0]/p[1]
 
 """
