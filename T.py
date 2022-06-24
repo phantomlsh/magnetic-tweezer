@@ -116,13 +116,13 @@ def tiProfile(n: int):
         for r in range(Nr): # normalize intensity profile
             _I[i, r] = (_I[i, r] - minI) * 2 / (maxI - minI) - 1   
 
-def tilde(I, w):
+def tilde(I):
     I = np.append(np.flip(I), I)
     Iq = np.fft.fft(I)
     q = np.fft.fftfreq(I.shape[-1])
     l = len(Iq)
-    win = np.append(np.zeros(w[0]), np.hanning(w[1]-w[0]))
-    win = np.append(win, np.zeros(l-w[1]))
+    win = np.append(np.zeros(W[0]), np.hanning(W[1]-W[0]))
+    win = np.append(win, np.zeros(l-W[1]))
     It = np.fft.ifft(Iq*win)
     return It[Rf+(len(It)//2):len(It)]
 
@@ -172,15 +172,15 @@ Finalize calibration by computing phase etc.
 @param w: [a, b] window in Fourier space
 """
 def ComputeCalibration(beads, rf=12, w=[5, 15]):
-    global Rf
+    global Rf, W
     Rf = rf
+    W = w
     for b in beads:
-        b.w = w
         b.Rc = [] # real part
         b.Φc = [] # phase angle
         b.Ac = [] # amplitude
         for I in b.Ic:
-            It = tilde(I, w)
+            It = tilde(I)
             b.Rc.append(np.real(It))
             b.Φc.append(np.angle(It))
             b.Ac.append(np.abs(It))
@@ -194,7 +194,7 @@ Calculate Z Position
 """
 def Z(beads, img):
     for b in beads:
-        It = tilde(b.profile, b.w)
+        It = tilde(b.profile)
         Ri = np.real(It)
         Φi = np.unwrap(np.angle(It))
         Ai = np.abs(It)

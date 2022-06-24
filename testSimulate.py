@@ -21,9 +21,8 @@ def run():
         # plt.plot(beads[0].profile)
         # plt.show()
 
-        T.Calibrate(beads, [img], 0)
-        T.Calibrate(beads, [img], 1)
-        T.Calibrate(beads, [img], 4)
+        for i in range(5):
+            T.Calibrate(beads, [img], 2)
 
         T.ComputeCalibration(beads)
 
