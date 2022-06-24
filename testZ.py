@@ -65,7 +65,7 @@ for i in range(1000):
 print('time =', time.time() - start)
 
 plt.grid()
-plt.plot(zs, marker="o")
+plt.scatter(range(len(zs)), zs)
 plt.title('Delta Z between two beads')
 plt.xlabel('Frame')
 plt.ylabel('Delta Z(nm)')
