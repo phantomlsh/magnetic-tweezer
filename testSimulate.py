@@ -9,10 +9,12 @@ img = np.ndarray((700, 756))
 simulate.Generate(50, 50, 50, 4, img)
 
 beads = []
-for i in range(30):
+for i in range(10):
     beads.append(T.Bead(50, 50))
 
 T.XY(beads, img)
+# plt.plot(beads[0].profile)
+# plt.show()
 
 T.Calibrate(beads, [img], 0)
 T.Calibrate(beads, [img], 1)

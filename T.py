@@ -101,13 +101,22 @@ def tiCore(n: int):
     tiXY(n)
     for i, r in ti.ndrange(n, Nr):
         _I[i, r] = 0
-    for i, r, θ in ti.ndrange(n, Nr, Nθ):
+    for i, r, θ in ti.ndrange(n, Nr, Nθ): # intensity profile
         x = _p[i][0] + Fr * r * ti.cos(θ * Fθ)
         y = _p[i][1] + Fr * r * ti.sin(θ * Fθ)
         _I[i, r] += tiBI(x, y) / Nθ
+    for i in range(n): # find max and min, serialized
+        maxI = 0.0
+        minI = 999.0
+        for r in range(Nr):
+            if (_I[i, r] > maxI):
+                maxI = _I[i, r]
+            if (_I[i, r] < minI):
+                minI = _I[i, r]
+        for r in range(Nr): # normalize intensity profile
+            _I[i, r] = (_I[i, r] - minI) * 2 / (maxI - minI) - 1   
 
 def tilde(I, rf, w):
-    I = 2 * I / np.max(I) - 1 # normalize to [-1, 1]
     I = np.append(np.flip(I), I)
     Iq = np.fft.fft(I)
     q = np.fft.fftfreq(I.shape[-1])
@@ -196,7 +205,6 @@ def Z(beads, img):
             Φi = Φi + 2*π
         ΔΦ = np.average(Φi-b.Φc[i-3:i+4], axis=1, weights=Ai*b.Ac[i-3:i+4])
         p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 1)
-        #plt.scatter(b.Zc, ΔΦ)
         b.z = -p[0]/p[1]
 
 """
