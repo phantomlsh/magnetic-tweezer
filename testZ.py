@@ -33,7 +33,7 @@ for i in range(50):
 T.ComputeCalibration(beads)
 
 plt.title('Calibration R')
-plt.imshow(np.flip(beads[0].Φc, axis=0), cmap="gray")
+plt.imshow(np.flip(beads[0].Rc, axis=0), cmap="gray")
 plt.show()
 
 # test

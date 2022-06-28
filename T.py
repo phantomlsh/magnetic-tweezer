@@ -114,7 +114,7 @@ def tiProfile(n: int):
             if (_I[i, r] < minI):
                 minI = _I[i, r]
         for r in range(Nr): # normalize intensity profile
-            _I[i, r] = (_I[i, r] - minI) * 2 / (maxI - minI) - 1   
+            _I[i, r] = (_I[i, r] - minI) * 2 / (maxI - minI) - 1
 
 @ti.func
 def _tilde(n: int):
