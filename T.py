@@ -3,8 +3,6 @@ import taichi as ti
 import matplotlib.pyplot as plt
 
 ti.init(arch=ti.gpu)
-
-maxN = 30
 π = np.pi
 
 """
@@ -13,7 +11,7 @@ Global params initialization
 @param nθ: sampling number in polar direction
 @param nr: sampling number in radial direction
 """
-def SetParams(r=40, nr=80, nθ=80, maxn=maxN):
+def SetParams(r=40, nr=80, nθ=80, maxn=30):
     global R, L, freq, Nr, Nθ, Fr, Fθ
     R = r
     L = r * 2
@@ -23,12 +21,13 @@ def SetParams(r=40, nr=80, nθ=80, maxn=maxN):
     Nθ = nθ
     Fr = R/Nr
     Fθ = 2*π/Nθ
-    global _im, _p, _I, _J, _x, _y, _cx, _cy
+    global _im, _p, _I, _J, _Iq, _x, _y, _cx, _cy
     _im = ti.field(dtype=ti.i32, shape=(1000, 1000)) # img data
     _p = ti.Vector.field(dtype=ti.f32, n=2, shape=(maxn)) # points
     _I = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # intensity
     _J = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # imaginary part
     # caches
+    _Iq = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # fourier space
     _x = ti.field(dtype=ti.f32, shape=(maxn, 2*R))
     _y = ti.field(dtype=ti.f32, shape=(maxn, 2*R))
     _cx = ti.field(dtype=ti.f32, shape=(maxn, 30))
@@ -117,6 +116,24 @@ def tiProfile(n: int):
         for r in range(Nr): # normalize intensity profile
             _I[i, r] = (_I[i, r] - minI) * 2 / (maxI - minI) - 1   
 
+@ti.func
+def _tilde(n: int):
+    l = 2 * Nr
+    for i, k in ti.ndrange(n, (Wl, Wr)):
+        _Iq[i, k] = 0
+    for i, k, r in ti.ndrange(n, (Wl, Wr), l):
+        _Iq[i, k] += _I[i, ti.abs(Nr-r)] * ti.cos(2*π*k*r/l) * (0.5 - 0.5 * ti.cos(2*π*(k-Wl)/(Wr-Wl-1)))
+    for i, r in ti.ndrange(n, Nr):
+        _I[i, r] = 0
+        _J[i, r] = 0
+    for i, k, r in ti.ndrange(n, (Wl, Wr), (Rf, Nr)):
+        _I[i, r] += _Iq[i, k] * ti.cos(2*π*k*(r+Nr)/l) / l
+        _J[i, r] += _Iq[i, k] * ti.sin(2*π*k*(r+Nr)/l) / l
+
+@ti.kernel
+def tiTilde(n: int):
+    _tilde(n)
+
 def tilde(I):
     I = np.append(np.flip(I), I)
     Iq = np.fft.fft(I)
@@ -178,15 +195,33 @@ def ComputeCalibration(beads, rf=12, wl=5, wr=15):
     Rf = rf
     Wl = wl
     Wr = wr
+    n = len(beads)
+    if (n == 0):
+        return
     for b in beads:
         b.Rc = [] # real part
         b.Φc = [] # phase angle
         b.Ac = [] # amplitude
-        for I in b.Ic:
-            It = tilde(I)
-            b.Rc.append(np.real(It))
-            b.Φc.append(np.angle(It))
-            b.Ac.append(np.abs(It))
+    nz = len(beads[0].Zc)
+    for z in range(nz):
+        I = []
+        for i in range(_I.shape[0]):
+            if i < n:
+                I.append(beads[i].Ic[z])
+            else:
+                I.append(np.zeros(Nr))
+        _I.from_numpy(np.array(I, dtype=np.float32))
+        tiTilde(n)
+        I = _I.to_numpy()
+        J = _J.to_numpy()
+        for i in range(n):
+            Ii = I[i][Rf:]
+            Ji = J[i][Rf:]
+            beads[i].Rc.append(Ii)
+            beads[i].Φc.append(np.arctan2(Ji, Ii))
+            beads[i].Ac.append(np.sqrt(Ii**2 + Ji**2))
+    for b in beads:
+        b.Φc = (np.array(b.Φc) + 2*π) % (2*π)
         b.Φc = np.unwrap(b.Φc, axis=0)
         b.Φc = np.unwrap(b.Φc, axis=1)
 
@@ -199,14 +234,14 @@ def Z(beads, img):
     for b in beads:
         It = tilde(b.profile)
         Ri = np.real(It)
-        Φi = np.unwrap(np.angle(It))
+        Φi = np.unwrap((np.angle(It) + (2*π)) % (2*π))
         Ai = np.abs(It)
         χ2 = np.sum((Ri-b.Rc)**2, axis=1)
         i = np.argmin(χ2)
-        while Φi[5] - b.Φc[i][5] > 3:
-            Φi = Φi - 2*π
-        while Φi[5] - b.Φc[i][5] < -3:
-            Φi = Φi + 2*π
+        # while Φi[5] - b.Φc[i][5] > 3:
+        #     Φi = Φi - 2*π
+        # while Φi[5] - b.Φc[i][5] < -3:
+        #     Φi = Φi + 2*π
         ΔΦ = np.average(Φi-b.Φc[i-3:i+4], axis=1, weights=Ai*b.Ac[i-3:i+4])
         p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 1)
         b.z = -p[0]/p[1]
