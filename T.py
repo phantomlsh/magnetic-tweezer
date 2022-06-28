@@ -23,10 +23,11 @@ def SetParams(r=40, nr=80, nθ=80, maxn=maxN):
     Nθ = nθ
     Fr = R/Nr
     Fθ = 2*π/Nθ
-    global _im, _p, _I, _x, _y, _cx, _cy
+    global _im, _p, _I, _J, _x, _y, _cx, _cy
     _im = ti.field(dtype=ti.i32, shape=(1000, 1000)) # img data
     _p = ti.Vector.field(dtype=ti.f32, n=2, shape=(maxn)) # points
     _I = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # intensity
+    _J = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # imaginary part
     # caches
     _x = ti.field(dtype=ti.f32, shape=(maxn, 2*R))
     _y = ti.field(dtype=ti.f32, shape=(maxn, 2*R))
@@ -121,8 +122,8 @@ def tilde(I):
     Iq = np.fft.fft(I)
     q = np.fft.fftfreq(I.shape[-1])
     l = len(Iq)
-    win = np.append(np.zeros(W[0]), np.hanning(W[1]-W[0]))
-    win = np.append(win, np.zeros(l-W[1]))
+    win = np.append(np.zeros(Wl), np.hanning(Wr-Wl))
+    win = np.append(win, np.zeros(l-Wr))
     It = np.fft.ifft(Iq*win)
     return It[Rf+(len(It)//2):len(It)]
 
@@ -135,7 +136,7 @@ def XY(beads, img):
     global _im
     if (_im.shape[0] != img.shape[0] or _im.shape[1] != img.shape[1]):
         _im = ti.field(dtype=ti.i32, shape=(img.shape[0], img.shape[1]))
-    _im.from_numpy(img.astype(int))
+    _im.from_numpy(img.astype(np.int32))
     n = len(beads)
     for i in range(n):
         _p[i][0] = beads[i].x
@@ -169,12 +170,14 @@ def Calibrate(beads, imgs, z):
 Finalize calibration by computing phase etc.
 @param beads: list of beads
 @param rf: forget radius
-@param w: [a, b] window in Fourier space
+@param wl: window left end in Fourier space
+@param wr: window right end in Fourier space
 """
-def ComputeCalibration(beads, rf=12, w=[5, 15]):
-    global Rf, W
+def ComputeCalibration(beads, rf=12, wl=5, wr=15):
+    global Rf, Wl, Wr
     Rf = rf
-    W = w
+    Wl = wl
+    Wr = wr
     for b in beads:
         b.Rc = [] # real part
         b.Φc = [] # phase angle

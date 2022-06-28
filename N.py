@@ -56,13 +56,12 @@ def profile(beads, img):
         b.profile = np.average(bilinearInterpolate(img, sxs + b.x, sys + b.y).reshape((Nθ, Nr)), axis=0)
 
 def tilde(I):
-    I = 2 * I / np.max(I) - 1 # normalize to [-1, 1]
     I = np.append(np.flip(I), I)
     Iq = np.fft.fft(I)
     q = np.fft.fftfreq(I.shape[-1])
     l = len(Iq)
-    win = np.append(np.zeros(W[0]), np.hanning(W[1]-W[0]))
-    win = np.append(win, np.zeros(l-W[1]))
+    win = np.append(np.zeros(Wl), np.hanning(Wr-Wl))
+    win = np.append(win, np.zeros(l-Wr))
     It = np.fft.ifft(Iq*win)
     return It[Rf+(len(It)//2):len(It)]
 
@@ -103,12 +102,14 @@ def Calibrate(beads, imgs, z):
 Finalize calibration by computing phase etc.
 @param beads: list of beads
 @param rf: forget radius
-@param w: [a, b] window in Fourier space
+@param wl: window left end in Fourier space
+@param wr: window right end in Fourier space
 """
-def ComputeCalibration(beads, rf=12, w=[5, 15]):
-    global Rf, W
+def ComputeCalibration(beads, rf=12, wl=5, wr=15):
+    global Rf, Wl, Wr
     Rf = rf
-    W = w
+    Wl = wl
+    Wr = wr
     for b in beads:
         b.Rc = [] # real part
         b.Φc = [] # phase angle
