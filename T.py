@@ -11,7 +11,7 @@ Global params initialization
 @param nθ: sampling number in polar direction
 @param nr: sampling number in radial direction
 """
-def SetParams(r=40, nr=80, nθ=80, maxn=30):
+def SetParams(r=40, nr=80, nθ=80, maxn=30, maxz=100):
     global R, L, freq, Nr, Nθ, Fr, Fθ
     R = r
     L = r * 2
@@ -21,11 +21,14 @@ def SetParams(r=40, nr=80, nθ=80, maxn=30):
     Nθ = nθ
     Fr = R/Nr
     Fθ = 2*π/Nθ
-    global _im, _p, _I, _J, _Iq, _x, _y, _cx, _cy
+    global _im, _p, _I, _J, _Z, _Φ, _A, _Iq, _x, _y, _cx, _cy
     _im = ti.field(dtype=ti.i32, shape=(1000, 1000)) # img data
-    _p = ti.Vector.field(dtype=ti.f32, n=2, shape=(maxn)) # points
+    _p = ti.Vector.field(dtype=ti.f32, n=3, shape=(maxn)) # points
     _I = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # intensity
     _J = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # imaginary part
+    _Z = ti.field(dtype=ti.f32, shape=(maxz)) # calibration z
+    _Φ = ti.field(dtype=ti.f32, shape=(maxn, maxz, Nr)) # calibration angle
+    _A = ti.field(dtype=ti.f32, shape=(maxn, maxz, Nr)) # calibration amplitude
     # caches
     _Iq = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # fourier space
     _x = ti.field(dtype=ti.f32, shape=(maxn, 2*R))
@@ -130,19 +133,39 @@ def _tilde(n: int):
         _I[i, r] += _Iq[i, k] * ti.cos(2*π*k*(r+Nr)/l) / l
         _J[i, r] += _Iq[i, k] * ti.sin(2*π*k*(r+Nr)/l) / l
 
+@ti.func
+def tiΔΦ(i: int, z: int) -> ti.f32:
+    s = 0.0
+    t = 0.0
+    for r in range(Rf, Nr):
+        Δ = (ti.atan2(_J[i, r], _I[i, r]) - _Φ[i, z, r]) % (2*π)
+        if (Δ > π):
+            Δ -= 2*π
+        w = ti.sqrt(_I[i, r] ** 2 + _J[i, r] ** 2) * _A[i, z, r]
+        t += w
+        s += w * Δ
+    return s / t
+
 @ti.kernel
 def tiTilde(n: int):
     _tilde(n)
 
-def tilde(I):
-    I = np.append(np.flip(I), I)
-    Iq = np.fft.fft(I)
-    q = np.fft.fftfreq(I.shape[-1])
-    l = len(Iq)
-    win = np.append(np.zeros(Wl), np.hanning(Wr-Wl))
-    win = np.append(win, np.zeros(l-Wr))
-    It = np.fft.ifft(Iq*win)
-    return It[Rf+(len(It)//2):len(It)]
+@ti.kernel
+def tiZ(n: int):
+    _tilde(n)
+    for i in range(n):
+        z0 = 0
+        minχ2 = 999999999.0
+        for z in range(Nz):
+            χ2 = 0.0
+            for r in range(Rf, Nr):
+                χ2 += (_I[i, r] - _A[i, z, r] * ti.cos(_Φ[i, z, r])) ** 2
+            if (χ2 < minχ2):
+                minχ2 = χ2
+                z0 = z
+        tiΔΦ(i, z0)
+        _p[i][2] = _Z[z0]
+
 
 """
 Calculate XY Position
@@ -191,7 +214,7 @@ Finalize calibration by computing phase etc.
 @param wr: window right end in Fourier space
 """
 def ComputeCalibration(beads, rf=12, wl=5, wr=15):
-    global Rf, Wl, Wr
+    global Rf, Wl, Wr, Nz
     Rf = rf
     Wl = wl
     Wr = wr
@@ -202,8 +225,8 @@ def ComputeCalibration(beads, rf=12, wl=5, wr=15):
         b.Rc = [] # real part
         b.Φc = [] # phase angle
         b.Ac = [] # amplitude
-    nz = len(beads[0].Zc)
-    for z in range(nz):
+    Nz = len(beads[0].Zc)
+    for z in range(Nz):
         I = []
         for i in range(_I.shape[0]):
             if i < n:
@@ -220,17 +243,39 @@ def ComputeCalibration(beads, rf=12, wl=5, wr=15):
             beads[i].Rc.append(Ii)
             beads[i].Φc.append(np.arctan2(Ji, Ii))
             beads[i].Ac.append(np.sqrt(Ii**2 + Ji**2))
+    Zc = []
+    Φc = []
+    Ac = []
     for b in beads:
+        b.Rc = np.array(b.Rc)
+        b.Ac = np.array(b.Ac)
         b.Φc = (np.array(b.Φc) + 2*π) % (2*π)
         b.Φc = np.unwrap(b.Φc, axis=0)
         b.Φc = np.unwrap(b.Φc, axis=1)
+        Zc = b.Zc
+        Φc.append(b.Φc)
+        Ac.append(b.Ac)
+    maxn = _A.shape[0]
+    maxz = _Z.shape[0]
+    Zc = np.pad(Zc, (0, maxz-Nz))
+    Φc = np.pad(Φc, ((0, maxn-n), (0, maxz-Nz), (Rf, 0)))
+    Ac = np.pad(Ac, ((0, maxn-n), (0, maxz-Nz), (Rf, 0)))
+    _Z.from_numpy(Zc.astype(np.float32))
+    _Φ.from_numpy(Φc.astype(np.float32))
+    _A.from_numpy(Ac.astype(np.float32))
 
 """
 Calculate Z Position
 @param beads: list of beads
-@param img: 2d array of image data
+@param img: useless
 """
-def Z(beads, img):
+def Z(beads, img=[]):
+    n = len(beads)
+    tiZ(n)
+    p = _p.to_numpy()
+    for i in range(n):
+        beads[i].z = p[i][2]
+    return
     for b in beads:
         It = tilde(b.profile)
         Ri = np.real(It)
