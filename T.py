@@ -223,17 +223,15 @@ Calculate XY Position
 @param beads: list of beads
 @param img: 2d array of image data
 """
-def XY(beads, img, profile=False):
+def XY(beads, img):
     n = refresh(beads, img)
     tiProfile(n) # compute x, y, I in taichi scope
     p = _p.to_numpy()
-    if (profile):
-        I = _I.to_numpy()
+    I = _I.to_numpy()
     for i in range(n):
         beads[i].x = p[i][0]
         beads[i].y = p[i][1]
-        if (profile):
-            beads[i].profile = I[i]
+        beads[i].profile = I[i]
 
 """
 Calculate I and store
@@ -245,7 +243,7 @@ def Calibrate(beads, imgs, z):
     for b in beads:
         b.l = []
     for img in imgs:
-        XY(beads, img, profile=True)
+        XY(beads, img)
         for b in beads:
             b.l.append(b.profile)
     for b in beads:

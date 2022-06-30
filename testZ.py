@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time, mm, utils
-import T as T
+import N as T
 
 beads = []
 
@@ -38,39 +38,30 @@ plt.show()
 
 # test
 
-mm.SetZ(sz + 900)
-# for i in range(4):
-#     z = mm.GetZ()
-#     img = mm.Get()
-#     T.XY(beads, img)
-#     T.Z(beads, img)
-#     print(beads[0].z - z)
-#     mm.SetZ(z + 950)
-#     plt.axvline(x=z)
-
-# # plt.grid()
-# # plt.title('Delta Phi for 4 sampled z position')
-# # plt.xlabel('Z(nm)')
-# # plt.ylabel('Delta Phi')
-# # plt.show()
-
-start = time.time()
 zs = []
-for i in range(1000):
-    img = mm.Get()
-    T.XY(beads, img)
-    T.Z(beads, img)
-    zs.append(beads[0].z - beads[1].z)
 
-print('time =', time.time() - start)
+for z in range(30):
+    mm.SetZ(sz + 1000 + z*100)
+    for i in range(100):
+        img = mm.Get()
+        T.XYZ(beads, img)
+        zs.append(beads[0].z)
+
+xs = []
+ys = []
+yerr = []
+for z in range(30):
+    x = sz + 1000 + z*100
+    data = zs[z*100:(z*100+100)]
+    xs.append(x)
+    ys.append(np.mean(data) - x)
+    yerr.append(np.std(data))
 
 plt.grid()
-plt.scatter(range(len(zs)), zs)
-plt.title('Delta Z between two beads')
-plt.xlabel('Frame')
-plt.ylabel('Delta Z(nm)')
+plt.errorbar(xs, ys, yerr=yerr, marker="o", capsize=3)
+plt.title('Bias in Z tracking')
+plt.xlabel('Z(nm)')
+plt.ylabel('Bias(nm)')
 plt.show()
-
-print(np.std(zs))
 
 mm.SetZ(sz)
