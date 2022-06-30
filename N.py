@@ -123,11 +123,12 @@ def ComputeCalibration(beads, rf=12, wl=5, wr=15):
         b.Φc = np.unwrap(b.Φc, axis=1)
 
 """
-Calculate Z Position
+Calculate XYZ Position
 @param beads: list of beads
 @param img: 2d array of image data
 """
-def Z(beads, img):
+def XYZ(beads, img):
+    XY(beads, img)
     profile(beads, img)
     for b in beads:
         It = tilde(b.profile)

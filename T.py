@@ -39,7 +39,7 @@ def SetParams(r=40, nr=80, nθ=80, maxn=30, maxz=100):
 
 SetParams()
 
-@ti.func
+@ti.func # Bilinear Interpolate
 def _BI(x: ti.f32, y: ti.f32) -> ti.f32:
     x0 = int(x)
     y0 = int(y)
@@ -51,14 +51,14 @@ def _BI(x: ti.f32, y: ti.f32) -> ti.f32:
     yl = y - y0
     return xu*yu*_im[y0, x0] + xu*yl*_im[y1, x0] + xl*yu*_im[y0, x1] + xl*yl*_im[y1, x1]
 
-@ti.func
+@ti.func # fit a parabola
 def _fitCenter(y0: ti.f32, y1: ti.f32, y2: ti.f32, y3: ti.f32, y4: ti.f32) -> ti.f32:
     a = (2*y0 - y1 - 2*y2 - y3 + 2*y4) / 14
     b = -0.2*y0 - 0.1*y1 + 0.1*y3 + 0.2*y4
     return -b/a/2
 
 # x, y are ti.Vector
-@ti.func
+@ti.func # fit a line
 def _fitZero(x, y, n) -> ti.f32:
     a = n
     c = x.sum()
@@ -70,8 +70,20 @@ def _fitZero(x, y, n) -> ti.f32:
     k = (f * a - e * c) / D
     return -b/k
 
+@ti.func # fit a line
+def _fitZero(x1: ti.f32, x2: ti.f32, x3: ti.f32, x4: ti.f32, x5: ti.f32, y1: ti.f32, y2: ti.f32, y3: ti.f32, y4: ti.f32, y5: ti.f32) -> ti.f32:
+    a = 5
+    c = x1 + x2 + x3 + x4 + x5
+    d = x1*x1 + x2*x2 + x3*x3 + x4*x4 + x5*x5
+    D = a * d - c * c
+    e = y1 + y2 + y3 + y4 + y5
+    f = x1*y1 + x2*y2 + x3*y3 + x4*y4 + x5*y5
+    b = (e * d - c * f) / D
+    k = (f * a - e * c) / D
+    return -b/k
+
 @ti.func
-def _XY(n: int):
+def _XY(n: ti.i32):
     for i, t in ti.ndrange(n, (-R, R)): # sample slice
         x = _p[i][0]
         y = _p[i][1]
@@ -112,10 +124,8 @@ def _XY(n: int):
         _p[i][0] += (x - 15 + _fitCenter(_cx[i, x-2], _cx[i, x-1], _cx[i, x], _cx[i, x+1], _cx[i, x+2])) / 2
         _p[i][1] += (y - 15 + _fitCenter(_cy[i, y-2], _cy[i, y-1], _cy[i, y], _cy[i, y+1], _cy[i, y+2])) / 2
 
-@ti.kernel
-def tiProfile(n: int):
-    _XY(n)
-    _XY(n)
+@ti.func
+def _profile(n: ti.i32):
     for i, r in ti.ndrange(n, Nr):
         _I[i, r] = 0
     for i, r, θ in ti.ndrange(n, Nr, Nθ): # intensity profile
@@ -160,33 +170,41 @@ def _ΔΦ(i: ti.i32, z: ti.i32) -> ti.f32:
         s += w * Δ
     return s / t
 
-@ti.kernel
-def tiTilde(n: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32):
-    _tilde(n, rf, wl, wr)
-
-@ti.kernel
-def tiZ(n: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32):
-    _tilde(n, rf, wl, wr)
+@ti.func
+def __Z(n: ti.i32, rf: ti.i32, nz: ti.i32):
     for i in range(n):
         z0 = 0
         minχ2 = 999999999.0
-        for z in range(Nz):
+        for z in range(nz):
             χ2 = 0.0
-            for r in range(Rf, Nr):
+            for r in range(rf, Nr):
                 χ2 += (_I[i, r] - _R[i, z, r]) ** 2
             if (χ2 < minχ2):
                 minχ2 = χ2
                 z0 = z
-        zs = ti.Vector([_Z[z0-2], _Z[z0-1], _Z[z0], _Z[z0+1], _Z[z0+2]])
-        ΔΦs = ti.Vector([_ΔΦ(i, z0-2), _ΔΦ(i, z0-1), _ΔΦ(i, z0), _ΔΦ(i, z0+1), _ΔΦ(i, z0+2)])
-        _p[i][2] = _fitZero(zs, ΔΦs, 5)
+        _p[i][2] = _fitZero(_Z[z0-2], _Z[z0-1], _Z[z0], _Z[z0+1], _Z[z0+2], _ΔΦ(i, z0-2), _ΔΦ(i, z0-1), _ΔΦ(i, z0), _ΔΦ(i, z0+1), _ΔΦ(i, z0+2))
 
-"""
-Calculate XY Position
-@param beads: list of beads
-@param img: 2d array of image data
-"""
-def XY(beads, img, profile=False):
+@ti.kernel # XY & profile
+def tiProfile(n: ti.i32):
+    _XY(n)
+    _XY(n)
+    _profile(n)
+
+@ti.kernel # for ComputeCalibration
+def tiTilde(n: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32):
+    _tilde(n, rf, wl, wr)
+
+@ti.kernel
+def tiXYZ(n: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32, nz: ti.i32):
+    _XY(n)
+    _XY(n)
+    _profile(n)
+    _tilde(n, rf, wl, wr)
+    __Z(n, rf, nz)
+
+# refresh data into taichi scope
+# @return number of beads
+def refresh(beads, img):
     global _im
     if (_im.shape[0] != img.shape[0] or _im.shape[1] != img.shape[1]):
         _im = ti.field(dtype=ti.i32, shape=(img.shape[0], img.shape[1]))
@@ -198,6 +216,15 @@ def XY(beads, img, profile=False):
     for b in beads:
         p.append([b.x, b.y])
     _p.from_numpy(np.pad(np.array(p, dtype=np.float32), (0, maxn-n)))
+    return n
+
+"""
+Calculate XY Position
+@param beads: list of beads
+@param img: 2d array of image data
+"""
+def XY(beads, img, profile=False):
+    n = refresh(beads, img)
     tiProfile(n) # compute x, y, I in taichi scope
     p = _p.to_numpy()
     if (profile):
@@ -288,15 +315,17 @@ def ComputeCalibration(beads, rf=12, wl=5, wr=15):
     _R.from_numpy(Rc.astype(np.float32))
 
 """
-Calculate Z Position
+Calculate XYZ Position (cover XY)
 @param beads: list of beads
-@param img: useless
+@param img: 2d array of image data
 """
-def Z(beads, img=[]):
-    n = len(beads)
-    tiZ(n, Rf, Wl, Wr)
+def XYZ(beads, img):
+    n = refresh(beads, img)
+    tiXYZ(n, Rf, Wl, Wr, Nz)
     p = _p.to_numpy()
     for i in range(n):
+        beads[i].x = p[i][0]
+        beads[i].y = p[i][1]
         beads[i].z = p[i][2]
 
 """
