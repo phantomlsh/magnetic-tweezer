@@ -6,9 +6,11 @@ import N as T
 beads = []
 
 circles = utils.HoughCircles(mm.Get(), 15, 30)
-for c in circles:
-    if (c[0] > 80 and c[0] < 680 and c[1] > 80 and c[1] < 500):
-        beads.append(T.Bead(c[0], c[1]))
+# for c in circles:
+#     if (c[0] > 80 and c[0] < 680 and c[1] > 80 and c[1] < 500):
+#         beads.append(T.Bead(c[0], c[1]))
+
+beads = [T.Bead(circles[0][0], circles[0][1])]
 
 n = len(beads)
 print(n, "Beads:", beads)
@@ -24,7 +26,7 @@ def imgSet(n):
 
 # calibrate
 sz = mm.GetZ()
-for i in range(50):
+for i in range(100):
     imgs = imgSet(5)
     z = mm.GetZ()
     T.Calibrate(beads, imgs, z)
@@ -40,7 +42,7 @@ plt.show()
 
 zs = []
 
-for z in range(30):
+for z in range(80):
     mm.SetZ(sz + 1000 + z*100)
     for i in range(100):
         img = mm.Get()
@@ -50,7 +52,7 @@ for z in range(30):
 xs = []
 ys = []
 yerr = []
-for z in range(30):
+for z in range(80):
     x = sz + 1000 + z*100
     data = zs[z*100:(z*100+100)]
     xs.append(x)
