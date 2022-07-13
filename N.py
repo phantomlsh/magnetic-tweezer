@@ -105,7 +105,7 @@ Finalize calibration by computing phase etc.
 @param wl: window left end in Fourier space
 @param wr: window right end in Fourier space
 """
-def ComputeCalibration(beads, rf=12, wl=5, wr=15):
+def ComputeCalibration(beads, rf=10, wl=5, wr=30):
     global Rf, Wl, Wr
     Rf = rf
     Wl = wl

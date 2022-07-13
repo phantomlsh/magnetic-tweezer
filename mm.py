@@ -1,3 +1,10 @@
+"""
+MicroManager Interface
+for image and Z position
+
+2022.07.06 Phantomlsh
+"""
+
 from pycromanager import Bridge
 import atexit
 import numpy as np
@@ -7,6 +14,7 @@ bridge = Bridge()
 core = bridge.get_core()
 core.get_version_info()
 
+# Snap an image to get height and width
 core.snap_image()
 tagged_image = core.get_tagged_image()
 Height = tagged_image.tags["Height"]
@@ -23,6 +31,7 @@ def exit_handler():
 
 atexit.register(exit_handler)
 
+# Acquire image
 def Get():
     image = core.get_last_image()
     return np.reshape(image, (Height, Width))
