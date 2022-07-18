@@ -28,7 +28,7 @@ for loop in range(1000):
 
 print('time:', time.time() - start)
 print('STD:', np.std(xss[0][10:] - np.mean(xss[1:], axis=0)[10:]))
-plt.plot(ts[10:], (xss[0] - np.mean(xss[1:], axis=0))[10:], marker="o")
+plt.scatter(ts[10:], (xss[0] - np.mean(xss[1:], axis=0))[10:])
 plt.title('Relative X of 1 bead w.r.t. mean X of beads')
 plt.xlabel('Time')
 plt.show()
