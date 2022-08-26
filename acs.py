@@ -17,6 +17,7 @@ if (hc == -1):
 	print("Fail to connect ACS Motion Control")
 else:
 	io.acsc_Enable(hc, 0, 0)
+	print("Connected to ACS Motion Control")
 
 def To(pos):
 	io.acsc_ToPoint(hc, 0, 0, double(pos), 0)
