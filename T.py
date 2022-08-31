@@ -21,9 +21,9 @@ def SetParams(r=40, nr=80, nθ=80, maxn=30, maxz=100):
     Nθ = nθ
     Fr = R/Nr
     Fθ = 2*π/Nθ
-    global _im, _p, _I, _J, _Z, _Φ, _A, _R, _Iq, _x, _y, _cx, _cy
+    global _im, _p, _I, _J, _Z, _Φ, _A, _R, _Iq, _x, _cx
     _im = ti.field(dtype=ti.i32, shape=(1000, 1000)) # img data
-    _p = ti.Vector.field(dtype=ti.f32, n=3, shape=(maxn)) # points
+    _p = ti.field(dtype=ti.f32, shape=(maxn, 3)) # points
     _I = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # intensity
     _J = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # imaginary part
     _Z = ti.field(dtype=ti.f32, shape=(maxz)) # calibration z
@@ -33,9 +33,7 @@ def SetParams(r=40, nr=80, nθ=80, maxn=30, maxz=100):
     # caches
     _Iq = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # fourier space
     _x = ti.field(dtype=ti.f32, shape=(maxn, 2*R))
-    _y = ti.field(dtype=ti.f32, shape=(maxn, 2*R))
     _cx = ti.field(dtype=ti.f32, shape=(maxn, 30))
-    _cy = ti.field(dtype=ti.f32, shape=(maxn, 30))
 
 SetParams()
 
@@ -57,19 +55,6 @@ def _fitCenter(y0: ti.f32, y1: ti.f32, y2: ti.f32, y3: ti.f32, y4: ti.f32) -> ti
     b = -0.2*y0 - 0.1*y1 + 0.1*y3 + 0.2*y4
     return -b/a/2
 
-# x, y are ti.Vector
-@ti.func # fit a line
-def _fitZero(x, y, n) -> ti.f32:
-    a = n
-    c = x.sum()
-    d = x.dot(x)
-    D = a * d - c * c
-    e = y.sum()
-    f = y.dot(x)
-    b = (e * d - c * f) / D
-    k = (f * a - e * c) / D
-    return -b/k
-
 @ti.func # fit a line
 def _fitZero(x1: ti.f32, x2: ti.f32, x3: ti.f32, x4: ti.f32, x5: ti.f32, y1: ti.f32, y2: ti.f32, y3: ti.f32, y4: ti.f32, y5: ti.f32) -> ti.f32:
     a = 5
@@ -83,65 +68,66 @@ def _fitZero(x1: ti.f32, x2: ti.f32, x3: ti.f32, x4: ti.f32, x5: ti.f32, y1: ti.
     return -b/k
 
 @ti.func
-def _XY(n: ti.i32):
-    for i, t in ti.ndrange(n, (-R, R)): # sample slice
-        x = _p[i][0]
-        y = _p[i][1]
-        _x[i, t+R] = _BI(x + t, y - 1) + _BI(x + t, y) + _BI(x + t, y + 1)
-        _y[i, t+R] = _BI(x - 1, y + t) + _BI(x, y + t) + _BI(x + 1, y + t)
+def _parallelNormalize(arr: ti.template(), n: ti.i32, d: ti.i32):
+    for i in range(n):
+        _min[i] = 999999.0
+        _max[i] = 0.0
+    for i, t in ti.ndrange(n, d):
+        ti.atomic_max(_max[i], arr[i, t])
+        ti.atomic_min(_min[i], arr[i, t])
+    for i, t in ti.ndrange(n, d):
+        arr[i, t] = (arr[i, t] - _min[i]) * 2 / (_max[i] - _min[i]) - 1
+
+@ti.func
+def _normalize(arr: ti.template(), n: ti.i32, d: ti.i32):
     for i in range(n): # find max and min, serialized
         maxx = 0.0
-        maxy = 0.0
         minx = 999.0
-        miny = 999.0
-        for t in range(2*R):
-            if (_x[i, t] > maxx):
-                maxx = _x[i, t]
-            if (_y[i, t] > maxy):
-                maxy = _y[i, t]
-            if (_x[i, t] < minx):
-                minx = _x[i, t]
-            if (_y[i, t] < miny):
-                miny = _y[i, t]
-        for t in range(2*R):
-            _x[i, t] = (_x[i, t] - minx) * 2 / (maxx - minx) - 1
-            _y[i, t] = (_y[i, t] - miny) * 2 / (maxy - miny) - 1
+        for t in range(d):
+            if (arr[i, t] > maxx):
+                maxx = arr[i, t]
+            if (arr[i, t] < minx):
+                minx = arr[i, t]
+        for t in range(d):
+            arr[i, t] = (arr[i, t] - minx) * 2 / (maxx - minx) - 1
+
+@ti.func
+def _cX(n: ti.i32, d: ti.i32): # d = 0(X)|1(Y)
+    _normalize(_x, n, 2*R)
     # correlate
     for i, k in ti.ndrange(n, 30):
         _cx[i, k] = 0
-        _cy[i, k] = 0
     for i, k, l in ti.ndrange(n, 30, 2*R):
         _cx[i, k] += _x[i, l] * _x[i, k - l + L - 16]
-        _cy[i, k] += _y[i, l] * _y[i, k - l + L - 16]
     for i in range(n): # find max in correlate and fit
         x = 15
-        y = 15
         for t in range(30):
             if _cx[i, t] > _cx[i, x]:
                 x = t
-            if _cy[i, t] > _cy[i, y]:
-                y = t
-        _p[i][0] += (x - 15 + _fitCenter(_cx[i, x-2], _cx[i, x-1], _cx[i, x], _cx[i, x+1], _cx[i, x+2])) / 2
-        _p[i][1] += (y - 15 + _fitCenter(_cy[i, y-2], _cy[i, y-1], _cy[i, y], _cy[i, y+1], _cy[i, y+2])) / 2
+        _p[i, d] += (x - 15 + _fitCenter(_cx[i, x-2], _cx[i, x-1], _cx[i, x], _cx[i, x+1], _cx[i, x+2])) / 2
+
+@ti.func
+def _XY(n: ti.i32):
+    for i, t in ti.ndrange(n, (-R, R)): # sample slice x
+        x = _p[i, 0]
+        y = _p[i, 1]
+        _x[i, t+R] = _BI(x + t, y - 1) + _BI(x + t, y) + _BI(x + t, y + 1)
+    _cX(n, 0)
+    for i, t in ti.ndrange(n, (-R, R)): # sample slice y
+        x = _p[i, 0]
+        y = _p[i, 1]
+        _x[i, t+R] = _BI(x - 1, y + t) + _BI(x, y + t) + _BI(x + 1, y + t)
+    _cX(n, 1)
 
 @ti.func
 def _profile(n: ti.i32):
     for i, r in ti.ndrange(n, Nr):
         _I[i, r] = 0
     for i, r, θ in ti.ndrange(n, Nr, Nθ): # intensity profile
-        x = _p[i][0] + Fr * r * ti.cos(θ * Fθ)
-        y = _p[i][1] + Fr * r * ti.sin(θ * Fθ)
+        x = _p[i, 0] + Fr * r * ti.cos(θ * Fθ)
+        y = _p[i, 1] + Fr * r * ti.sin(θ * Fθ)
         _I[i, r] += _BI(x, y) / Nθ
-    for i in range(n): # find max and min, serialized
-        maxI = 0.0
-        minI = 999.0
-        for r in range(Nr):
-            if (_I[i, r] > maxI):
-                maxI = _I[i, r]
-            if (_I[i, r] < minI):
-                minI = _I[i, r]
-        for r in range(Nr): # normalize intensity profile
-            _I[i, r] = (_I[i, r] - minI) * 2 / (maxI - minI) - 1
+    _normalize(_I, n, Nr)
 
 @ti.func
 def _tilde(n: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32):
@@ -182,7 +168,7 @@ def __Z(n: ti.i32, rf: ti.i32, nz: ti.i32):
             if (χ2 < minχ2):
                 minχ2 = χ2
                 z0 = z
-        _p[i][2] = _fitZero(_Z[z0-2], _Z[z0-1], _Z[z0], _Z[z0+1], _Z[z0+2], _ΔΦ(i, z0-2), _ΔΦ(i, z0-1), _ΔΦ(i, z0), _ΔΦ(i, z0+1), _ΔΦ(i, z0+2))
+        _p[i, 2] = _fitZero(_Z[z0-2], _Z[z0-1], _Z[z0], _Z[z0+1], _Z[z0+2], _ΔΦ(i, z0-2), _ΔΦ(i, z0-1), _ΔΦ(i, z0), _ΔΦ(i, z0+1), _ΔΦ(i, z0+2))
 
 @ti.kernel # XY & profile
 def tiProfile(n: ti.i32):
@@ -214,8 +200,8 @@ def refresh(beads, img):
     maxn = _p.shape[0]
     p = []
     for b in beads:
-        p.append([b.x, b.y])
-    _p.from_numpy(np.pad(np.array(p, dtype=np.float32), (0, maxn-n)))
+        p.append([b.x, b.y, 0])
+    _p.from_numpy(np.pad(np.array(p, dtype=np.float32), ((0, maxn-n), (0, 0))))
     return n
 
 """
@@ -316,9 +302,13 @@ def ComputeCalibration(beads, rf=10, wl=3, wr=30):
 Calculate XYZ Position (cover XY)
 @param beads: list of beads
 @param img: 2d array of image data
+@param re: refresh the bead position and img size
 """
-def XYZ(beads, img):
-    n = refresh(beads, img)
+def XYZ(beads, img, re=False):
+    if (re):
+        refresh(beads, img)
+    _im.from_numpy(img.astype(np.int32))
+    n = len(beads)
     tiXYZ(n, Rf, Wl, Wr, Nz)
     p = _p.to_numpy()
     for i in range(n):
