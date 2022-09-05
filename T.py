@@ -11,7 +11,7 @@ Global params initialization
 @param nθ: sampling number in polar direction
 @param nr: sampling number in radial direction
 """
-def SetParams(r=40, nr=80, nθ=80, maxn=30, maxz=100):
+def SetParams(r=40, nr=80, nθ=80, maxn=100, maxz=100):
     global R, L, freq, Nr, Nθ, Fr, Fθ
     R = r
     L = r * 2
