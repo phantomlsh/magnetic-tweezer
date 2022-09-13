@@ -17,32 +17,32 @@ simulate.Generate(50, 50, 60, 4, img)
 maxn = 20
 loopRange = range(1, maxn)
 
-if (False):
+if (True):
     ts = []
     for loop in loopRange:
         beads = []
         for i in range(loop):
             beads.append(T.Bead(50, 50))
 
-        T.XY(beads, [img])
+        T.XY(beads, img)
 
         for i in range(20):
             T.Calibrate(beads, [imgc[i]], i)
 
         T.ComputeCalibration(beads)
-        T.XYZ(beads, [img])
+        T.XYZ(beads, img)
         print(loop, beads[0])
 
         start = time.time()
         for i in range(100):
-            T.XYZ(beads, [img])
+            T.XYZ(beads, img)
         ts.append(time.time() - start)
 
     print(ts)
     plt.plot(loopRange, np.array(ts), marker="o", label="GPU - Taichi")
     print(np.polynomial.polynomial.polyfit(loopRange[1:], ts[1:], 1))
 
-if (True):
+if (False):
     ts = []
     for loop in loopRange:
         beads = []

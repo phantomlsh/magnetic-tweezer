@@ -22,7 +22,7 @@ def SetParams(r=40, nr=80, nθ=80, maxn=50, maxz=100):
     Fr = R/Nr
     Fθ = 2*π/Nθ
     global _im, _p, _I, _J, _Z, _Φ, _A, _R, _Iq, _x, _cx
-    _im = ti.field(dtype=ti.i32, shape=(1000, 1000)) # img data
+    _im = ti.field(dtype=ti.i32, shape=(maxn, 2*R+10, 2*R+10)) # img grid
     _p = ti.field(dtype=ti.f32, shape=(maxn, 3)) # points
     _I = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # intensity
     _J = ti.field(dtype=ti.f32, shape=(maxn, Nr)) # imaginary part
@@ -38,7 +38,7 @@ def SetParams(r=40, nr=80, nθ=80, maxn=50, maxz=100):
 SetParams()
 
 @ti.func # Bilinear Interpolate
-def _BI(x: ti.f32, y: ti.f32) -> ti.f32:
+def _BI(i: ti.i32, x: ti.f32, y: ti.f32) -> ti.f32:
     x0 = int(x)
     y0 = int(y)
     x1 = x0 + 1
@@ -47,7 +47,7 @@ def _BI(x: ti.f32, y: ti.f32) -> ti.f32:
     xl = x - x0
     yu = y1 - y
     yl = y - y0
-    return xu*yu*_im[y0, x0] + xu*yl*_im[y1, x0] + xl*yu*_im[y0, x1] + xl*yl*_im[y1, x1]
+    return xu*yu*_im[i, y0, x0] + xu*yl*_im[i, y1, x0] + xl*yu*_im[i, y0, x1] + xl*yl*_im[i, y1, x1]
 
 @ti.func # fit a parabola
 def _fitCenter(y0: ti.f32, y1: ti.f32, y2: ti.f32, y3: ti.f32, y4: ti.f32) -> ti.f32:
@@ -108,15 +108,11 @@ def _cX(n: ti.i32, d: ti.i32): # d = 0(X)|1(Y)
 
 @ti.func
 def _XY(n: ti.i32):
-    for i, t in ti.ndrange(n, (-R, R)): # sample slice x
-        x = _p[i, 0]
-        y = _p[i, 1]
-        _x[i, t+R] = _BI(x + t, y - 1) + _BI(x + t, y) + _BI(x + t, y + 1)
+    for i, t in ti.ndrange(n, (5, 2*R+5)): # sample slice x
+        _x[i, t-5] = _BI(i, t + _p[i, 0], R+4) + _BI(i, t + _p[i, 0], R+5) + _BI(i, t + _p[i, 0], R+6)
     _cX(n, 0)
-    for i, t in ti.ndrange(n, (-R, R)): # sample slice y
-        x = _p[i, 0]
-        y = _p[i, 1]
-        _x[i, t+R] = _BI(x - 1, y + t) + _BI(x, y + t) + _BI(x + 1, y + t)
+    for i, t in ti.ndrange(n, (5, 2*R+5)): # sample slice y
+        _x[i, t-5] = _BI(i, R+4, t + _p[i, 1]) + _BI(i, R+5, t + _p[i, 1]) + _BI(i, R+6, t + _p[i, 1])
     _cX(n, 1)
 
 @ti.func
@@ -124,9 +120,9 @@ def _profile(n: ti.i32):
     for i, r in ti.ndrange(n, Nr):
         _I[i, r] = 0
     for i, r, θ in ti.ndrange(n, Nr, Nθ): # intensity profile
-        x = _p[i, 0] + Fr * r * ti.cos(θ * Fθ)
-        y = _p[i, 1] + Fr * r * ti.sin(θ * Fθ)
-        _I[i, r] += _BI(x, y) / Nθ
+        x = R+5 + _p[i, 0] + Fr * r * ti.cos(θ * Fθ)
+        y = R+5 + _p[i, 1] + Fr * r * ti.sin(θ * Fθ)
+        _I[i, r] += _BI(i, x, y) / Nθ
     _normalize(_I, n, Nr)
 
 @ti.func
@@ -172,7 +168,7 @@ def __Z(n: ti.i32, rf: ti.i32, nz: ti.i32):
 
 @ti.kernel # XY & profile
 def tiProfile(n: ti.i32):
-    _XY(n)
+    _XY(n) # iterate twice
     _XY(n)
     _profile(n)
 
@@ -188,20 +184,22 @@ def tiXYZ(n: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32, nz: ti.i32):
     _tilde(n, rf, wl, wr)
     __Z(n, rf, nz)
 
-# refresh data into taichi scope
+# load data into taichi scope
 # @return number of beads
-def refresh(beads, img):
-    global _im
-    if (_im.shape[0] != img.shape[0] or _im.shape[1] != img.shape[1]):
-        _im = ti.field(dtype=ti.i32, shape=(img.shape[0], img.shape[1]))
-    _im.from_numpy(img.astype(np.int32))
+def load(beads, img, pos=True):
     n = len(beads)
-    # copy current x, y into taichi scope
-    maxn = _p.shape[0]
+    im = []
     p = []
     for b in beads:
-        p.append([b.x, b.y, 0])
-    _p.from_numpy(np.pad(np.array(p, dtype=np.float32), ((0, maxn-n), (0, 0))))
+        x = int(b.x)
+        y = int(b.y)
+        im.append(img[y-R-5:y+R+5, x-R-5:x+R+5])
+        p.append([b.x - x, b.y - y, 0])
+    maxn = _im.shape[0]
+    im = np.pad(np.array(im, dtype=np.int32), ((0, maxn-n), (0, 0), (0, 0)))
+    p = np.pad(np.array(p, dtype=np.float32), ((0, maxn-n), (0, 0)))
+    _im.from_numpy(im)
+    _p.from_numpy(p)
     return n
 
 """
@@ -210,14 +208,15 @@ Calculate XY Position
 @param img: 2d array of image data
 """
 def XY(beads, img):
-    n = refresh(beads, img)
+    n = load(beads, img)
     tiProfile(n) # compute x, y, I in taichi scope
     p = _p.to_numpy()
     I = _I.to_numpy()
     for i in range(n):
-        beads[i].x = p[i][0]
-        beads[i].y = p[i][1]
-        beads[i].profile = I[i]
+        b = beads[i]
+        b.x = int(b.x) + p[i][0]
+        b.y = int(b.y) + p[i][1]
+        b.profile = I[i]
 
 """
 Calculate I and store
@@ -302,19 +301,16 @@ def ComputeCalibration(beads, rf=10, wl=3, wr=30):
 Calculate XYZ Position (cover XY)
 @param beads: list of beads
 @param img: 2d array of image data
-@param re: refresh the bead position and img size
 """
-def XYZ(beads, img, re=False):
-    if (re):
-        refresh(beads, img)
-    _im.from_numpy(img.astype(np.int32))
-    n = len(beads)
+def XYZ(beads, img):
+    n = load(beads, img)
     tiXYZ(n, Rf, Wl, Wr, Nz)
     p = _p.to_numpy()
     for i in range(n):
-        beads[i].x = p[i][0]
-        beads[i].y = p[i][1]
-        beads[i].z = p[i][2]
+        b = beads[i]
+        b.x = int(b.x) + p[i][0]
+        b.y = int(b.y) + p[i][1]
+        b.z = int(b.z) + p[i][2]
 
 """
 Interface for beads

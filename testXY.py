@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time, mm, utils
-import N as T
+import T as T
 
 beads = []
 
