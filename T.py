@@ -138,35 +138,36 @@ def _tilde(ζ: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32):
         _I[μ, r] = 0
         _J[μ, r] = 0
     for μ, k, r in ti.ndrange(ζ, (wl, wr), (rf, Nr)):
-        _I[μ, r] += _Iq[i, k] * ti.cos(2*π*k*(r+Nr)/l) / l
-        _J[μ, r] += _Iq[i, k] * ti.sin(2*π*k*(r+Nr)/l) / l
+        _I[μ, r] += _Iq[μ, k] * ti.cos(2*π*k*(r+Nr)/l) / l
+        _J[μ, r] += _Iq[μ, k] * ti.sin(2*π*k*(r+Nr)/l) / l
 
 @ti.func
-def _ΔΦ(μ: ti.i32, z: ti.i32) -> ti.f32:
+def _ΔΦ(μ: ti.i32, i: ti.i32, z: ti.i32) -> ti.f32:
     s = 0.0
     t = 0.0
     for r in range(Rf, Nr):
-        Δ = (ti.atan2(_J[μ, r], _I[μ, r]) - _Φ[μ, z, r]) % (2*π)
+        Δ = (ti.atan2(_J[μ, r], _I[μ, r]) - _Φ[i, z, r]) % (2*π)
         if (Δ > π):
             Δ -= 2*π
-        w = ti.sqrt(_I[μ, r] ** 2 + _J[μ, r] ** 2) * _A[μ, z, r]
+        w = ti.sqrt(_I[μ, r] ** 2 + _J[μ, r] ** 2) * _A[i, z, r]
         t += w
         s += w * Δ
     return s / t
 
 @ti.func
-def __Z(ζ: ti.i32, rf: ti.i32, nz: ti.i32):
-    for μ in range(ζ):
+def __Z(n: ti.i32, m: ti.i32, rf: ti.i32, nz: ti.i32):
+    for i, j in ti.ndrange(n, m):
+        μ = j * n + i
         z0 = 0
         minχ2 = 999999999.0
         for z in range(nz):
             χ2 = 0.0
             for r in range(rf, Nr):
-                χ2 += (_I[μ, r] - _R[μ, z, r]) ** 2
+                χ2 += (_I[μ, r] - _R[i, z, r]) ** 2
             if (χ2 < minχ2):
                 minχ2 = χ2
                 z0 = z
-        _p[μ, 2] = _fitZero(_Z[z0-2], _Z[z0-1], _Z[z0], _Z[z0+1], _Z[z0+2], _ΔΦ(μ, z0-2), _ΔΦ(μ, z0-1), _ΔΦ(μ, z0), _ΔΦ(μ, z0+1), _ΔΦ(μ, z0+2))
+        _p[μ, 2] = _fitZero(_Z[z0-2], _Z[z0-1], _Z[z0], _Z[z0+1], _Z[z0+2], _ΔΦ(μ, i, z0-2), _ΔΦ(μ, i, z0-1), _ΔΦ(μ, i, z0), _ΔΦ(μ, i, z0+1), _ΔΦ(μ, i, z0+2))
 
 @ti.kernel # XY & profile
 def tiProfile(ζ: ti.i32):
@@ -179,46 +180,60 @@ def tiTilde(ζ: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32):
     _tilde(ζ, rf, wl, wr)
 
 @ti.kernel
-def tiXYZ(ζ: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32, nz: ti.i32):
-    _XY(ζ)
-    _XY(ζ)
-    _profile(ζ)
-    _tilde(ζ, rf, wl, wr)
-    __Z(ζ, rf, nz)
+def tiXYZ(n: ti.i32, m: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32, nz: ti.i32):
+    _XY(n * m)
+    _XY(n * m)
+    _profile(n * m)
+    _tilde(n * m, rf, wl, wr)
+    __Z(n, m, rf, nz)
 
 # load data into taichi scope
-# @return number of beads
-def load(beads, img, pos=True):
+# @return number of beads, number of images
+def load(beads, imgs, pos=True):
     n = len(beads)
+    m = len(imgs)
+    maxζ = _im.shape[0]
+    if n * m > maxζ:
+        raise Exception("Insufficient Capacity")
     im = []
     p = []
-    for b in beads:
-        x = int(b.x)
-        y = int(b.y)
-        im.append(img[y-R-5:y+R+5, x-R-5:x+R+5])
-        p.append([b.x - x, b.y - y, 0])
-    maxn = _im.shape[0]
-    im = np.pad(np.array(im, dtype=np.int32), ((0, maxn-n), (0, 0), (0, 0)))
-    p = np.pad(np.array(p, dtype=np.float32), ((0, maxn-n), (0, 0)))
+    for img in imgs:
+        for b in beads:
+            x = int(b.x)
+            y = int(b.y)
+            im.append(img[y-R-5:y+R+5, x-R-5:x+R+5])
+            p.append([b.x - x, b.y - y, 0])
+    im = np.pad(np.array(im, dtype=np.int32), ((0, maxζ-n*m), (0, 0), (0, 0)))
+    p = np.pad(np.array(p, dtype=np.float32), ((0, maxζ-n*m), (0, 0)))
     _im.from_numpy(im)
     _p.from_numpy(p)
-    return n
+    return n, m
 
 """
 Calculate XY Position
 @param beads: list of beads
-@param img: 2d array of image data
+@param imgs: list of 2d array of image data
+@return: [[[x1, y1], [x2, y2]], [[x1, y1], [x2, y2]]]
 """
-def XY(beads, img):
-    n = load(beads, img)
-    tiProfile(n) # compute x, y, I in taichi scope
+def XY(beads, imgs):
+    n, m = load(beads, imgs)
+    tiProfile(n * m) # compute x, y, I in taichi scope
     p = _p.to_numpy()
     I = _I.to_numpy()
-    for i in range(n):
-        b = beads[i]
-        b.x = int(b.x) + p[i][0]
-        b.y = int(b.y) + p[i][1]
-        b.profile = I[i]
+    bp = []
+    for b in beads:
+        bp.append([int(b.x), int(b.y)])
+    res = []
+    for j in range(m):
+        r = []
+        for i in range(n):
+            b = beads[i]
+            b.x = bp[i][0] + p[i][0]
+            b.y = bp[i][1] + p[i][1]
+            b.profile = I[i]
+            r.append([b.x, b.y])
+        res.append(r)
+    return res
 
 """
 Calculate I and store
@@ -230,7 +245,7 @@ def Calibrate(beads, imgs, z):
     for b in beads:
         b.l = []
     for img in imgs:
-        XY(beads, img)
+        XY(beads, [img])
         for b in beads:
             b.l.append(b.profile)
     for b in beads:
@@ -302,17 +317,27 @@ def ComputeCalibration(beads, rf=10, wl=3, wr=30):
 """
 Calculate XYZ Position (cover XY)
 @param beads: list of beads
-@param img: 2d array of image data
+@param imgs: list of 2d array of image data
+@return: [[[x1, y1, z1], [x2, y2, z2]], [[x1, y1, z1], [x2, y2, z2]]]
 """
-def XYZ(beads, img):
-    n = load(beads, img)
-    tiXYZ(n, Rf, Wl, Wr, Nz)
+def XYZ(beads, imgs):
+    n, m = load(beads, imgs)
+    tiXYZ(n, m, Rf, Wl, Wr, Nz)
     p = _p.to_numpy()
-    for i in range(n):
-        b = beads[i]
-        b.x = int(b.x) + p[i][0]
-        b.y = int(b.y) + p[i][1]
-        b.z = int(b.z) + p[i][2]
+    bp = []
+    for b in beads:
+        bp.append([int(b.x), int(b.y)])
+    res = []
+    for j in range(m):
+        r = []
+        for i in range(n):
+            b = beads[i]
+            b.x = bp[i][0] + p[i][0]
+            b.y = bp[i][1] + p[i][1]
+            b.z = p[i][2]
+            r.append([b.x, b.y, b.z])
+        res.append(r)
+    return res
 
 """
 Interface for beads
