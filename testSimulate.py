@@ -14,7 +14,7 @@ for i in range(20):
 img = np.ndarray(shape)
 simulate.Generate(50, 50, 60, 4, img)
 
-maxn = 100
+maxn = 5
 loopRange = range(1, maxn)
 
 if (True):
@@ -24,18 +24,17 @@ if (True):
         for i in range(loop):
             beads.append(T.Bead(50, 50))
 
-        T.XY(beads, img)
+        T.XY(beads, [img])
 
         for i in range(20):
             T.Calibrate(beads, [imgc[i]], i)
 
         T.ComputeCalibration(beads)
-        T.XYZ(beads, img)
         print(loop, beads[0])
 
         start = time.time()
         for i in range(100):
-            T.XYZ(beads, img)
+            T.XYZ(beads, [img, img, img, img, img, img, img, img, img, img, img])
         ts.append(time.time() - start)
 
     print(ts)
@@ -49,18 +48,18 @@ if (False):
         for i in range(loop):
             beads.append(N.Bead(50, 50))
 
-        N.XY(beads, img)
+        N.XY(beads, [img])
 
         for i in range(20):
             N.Calibrate(beads, [imgc[i]], i)
 
         N.ComputeCalibration(beads)
-        N.XYZ(beads, img)
+        N.XYZ(beads, [img])
         print(loop, beads[0])
 
         start = time.time()
         for i in range(100):
-            N.XYZ(beads, img)
+            N.XYZ(beads, [img, img])
         ts.append(time.time() - start)
 
     print(ts)

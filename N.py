@@ -68,29 +68,37 @@ def tilde(I):
 """
 Calculate XY Position
 @param beads: list of beads
-@param img: 2d array of image data
+@param imgs: list of 2d array of image data
 @param it: iteration times
+@return: [[[x1, y1], [x2, y2]], [[x1, y1], [x2, y2]]]
 """
-def XY(beads, img, it=2):
-    for b in beads:
-        xl = int(b.x)
-        yl = int(b.y)
-        xline = np.sum(img[yl-2:yl+3, xl-R:xl+R], axis=0)
-        yline = np.sum(img[yl-R:yl+R, xl-2:xl+3], axis=1)
-        b.x = xl + centerShift(xline, it)
-        b.y = yl + centerShift(yline, it)
+def XY(beads, imgs, it=2):
+    res = []
+    for img in imgs:
+        r = []
+        for b in beads:
+            xl = int(b.x)
+            yl = int(b.y)
+            xline = np.sum(img[yl-2:yl+3, xl-R:xl+R], axis=0)
+            yline = np.sum(img[yl-R:yl+R, xl-2:xl+3], axis=1)
+            b.x = xl + centerShift(xline, it)
+            b.y = yl + centerShift(yline, it)
+            r.append([b.x, b.y])
+        res.append(r)
+    return res
+
 
 """
 Calculate I and store
 @param beads: list of beads
-@param imgs: array of 2d array of image data
+@param imgs: list of 2d array of image data
 @param z: z position
 """
 def Calibrate(beads, imgs, z):
     for b in beads:
         b.l = []
     for img in imgs:
-        XY(beads, img)
+        XY(beads, [img])
         profile(beads, img)
         for b in beads:
             b.l.append(b.profile)
@@ -125,25 +133,32 @@ def ComputeCalibration(beads, rf=10, wl=3, wr=30):
 """
 Calculate XYZ Position
 @param beads: list of beads
-@param img: 2d array of image data
+@param imgs: list of 2d array of image data
+@return: [[[x1, y1, z1], [x2, y2, z2]], [[x1, y1, z1], [x2, y2, z2]]]
 """
-def XYZ(beads, img):
-    XY(beads, img)
-    profile(beads, img)
-    for b in beads:
-        It = tilde(b.profile)
-        Ri = np.real(It)
-        Φi = np.unwrap(np.angle(It))
-        Ai = np.abs(It)
-        χ2 = np.sum((Ri-b.Rc)**2, axis=1)
-        i = np.argmin(χ2)
-        while Φi[5] - b.Φc[i][5] > 3:
-            Φi = Φi - 2*π
-        while Φi[5] - b.Φc[i][5] < -3:
-            Φi = Φi + 2*π
-        ΔΦ = np.average(Φi-b.Φc[i-3:i+4], axis=1, weights=Ai*b.Ac[i-3:i+4])
-        p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 1)
-        b.z = -p[0]/p[1]
+def XYZ(beads, imgs):
+    res = []
+    for img in imgs:
+        r = []
+        XY(beads, [img])
+        profile(beads, img)
+        for b in beads:
+            It = tilde(b.profile)
+            Ri = np.real(It)
+            Φi = np.unwrap(np.angle(It))
+            Ai = np.abs(It)
+            χ2 = np.sum((Ri-b.Rc)**2, axis=1)
+            i = np.argmin(χ2)
+            while Φi[5] - b.Φc[i][5] > 3:
+                Φi = Φi - 2*π
+            while Φi[5] - b.Φc[i][5] < -3:
+                Φi = Φi + 2*π
+            ΔΦ = np.average(Φi-b.Φc[i-3:i+4], axis=1, weights=Ai*b.Ac[i-3:i+4])
+            p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 1)
+            b.z = -p[0]/p[1]
+            r.append([b.x, b.y, b.z])
+        res.append(r)
+    return res
 
 """
 Interface for beads

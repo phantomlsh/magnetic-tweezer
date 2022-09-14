@@ -26,10 +26,11 @@ for loop in range(1000):
     for i in range(n):
         xss[i].append(beads[i].x)
 
+xss = np.array(xss)
 print('time:', time.time() - start)
-print('STD:', np.std(xss[0][10:] - np.mean(xss[1:], axis=0)[10:]))
-plt.scatter(ts[10:], (xss[0] - np.mean(xss[1:], axis=0))[10:])
-plt.title('Relative X of 1 bead w.r.t. mean X of beads')
-plt.xlabel('Time')
+print('STD:', np.std((xss[0] - xss[1])[10:]))
+plt.hist((xss[0] - xss[1])[10:], bins=30)
+plt.title('Distribution of Relative X Position Between 2 Ref. Beads')
+plt.xlabel('Relative X Position (px)')
 plt.show()
 
