@@ -3,13 +3,9 @@
 ## Get started
 
 ```python
-# Numpy version
-import N as T
-
-# or
-
-# Taichi version
-import T as T
+import N as T # Numpy version
+# OR
+import T as T # Taichi version
 ```
 
 Create beads
@@ -22,7 +18,7 @@ beads = [T.Bead(100, 120), b] # put beads into a list
 Track XY position
 
 ```python
-T.XY(beads, img) # img is numpy 2d array
+T.XY(beads, [img]) # img is numpy 2d array
 
 print(beads)
 print(beads[0].x, beads[0].y)
@@ -47,6 +43,25 @@ Track Z position (also XY position)
 **Must have called `ComputeCalibration` for the same set of beads**
 
 ```python
-T.XYZ(beads, img)
+T.XYZ(beads, [img])
 print(beads)
+```
+
+When using GPU acceleration, you can pass multiple images into parallel processing
+
+```python
+res = T.XYZ(beads, [img1, img2, img3])
+print(res)
+"""
+[   # XYZ tracking result
+	[   # result of img1
+		[100, 120, 122.5], # bead1 in img1
+		[200, 22.2, 12.5], # bead2 in img1
+	],
+	[   # result of img2
+		[101, 120, 122.9], # bead1 in img2
+		[202, 20.2, 10.2], # bead2 in img2
+	],
+]
+"""
 ```
