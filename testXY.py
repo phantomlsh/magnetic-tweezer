@@ -6,7 +6,7 @@ import T as T
 beads = []
 
 xss = []
-circles = utils.HoughCircles(mm.Get(), 15, 30)
+circles = utils.HoughCircles(mm.Get(), 8, 30)
 for c in circles:
     if (c[0] > 80 and c[0] < 680 and c[1] > 80 and c[1] < 500):
         beads.append(T.Bead(c[0], c[1]))
@@ -15,14 +15,14 @@ for c in circles:
 n = len(beads)
 print(n, "Beads:", beads)
 
-T.XY(beads, mm.Get())
+T.XY(beads, [mm.Get()])
 
 ts = []
 start = time.time()
 for loop in range(1000):
     img = mm.Get()
     ts.append(time.time() - start)
-    T.XY(beads, img)
+    T.XY(beads, [img])
     for i in range(n):
         xss[i].append(beads[i].x)
 

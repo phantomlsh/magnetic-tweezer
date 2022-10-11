@@ -58,7 +58,6 @@ def profile(beads, img):
 def tilde(I):
     I = np.append(np.flip(I), I)
     Iq = np.fft.fft(I)
-    q = np.fft.fftfreq(I.shape[-1])
     l = len(Iq)
     win = np.append(np.zeros(Wl), np.hanning(Wr-Wl))
     win = np.append(win, np.zeros(l-Wr))
@@ -113,7 +112,7 @@ Finalize calibration by computing phase etc.
 @param wl: window left end in Fourier space
 @param wr: window right end in Fourier space
 """
-def ComputeCalibration(beads, rf=10, wl=3, wr=30):
+def ComputeCalibration(beads, rf=15, wl=1, wr=30):
     global Rf, Wl, Wr
     Rf = rf
     Wl = wl
