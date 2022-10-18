@@ -9,7 +9,7 @@ Global params initialization
 @param nθ: sampling number in polar direction
 @param nr: sampling number in radial direction
 """
-def SetParams(r=40, nr=80, nθ=80):
+def SetParams(r=30, nr=80, nθ=80):
     global R, L, freq, Nr, Nθ, sxs, sys
     R = r
     L = r * 2
@@ -26,8 +26,7 @@ SetParams()
 
 # shift from the center
 def centerShift(array, it=2):
-    normalized = 2 * array / np.max(array) - 1
-    fft = np.fft.rfft(np.append(normalized, np.zeros(L)))
+    fft = np.fft.rfft(np.append(array, np.zeros(L)))
     res = 0
     d = 0
     for loop in range(it):
@@ -112,7 +111,7 @@ Finalize calibration by computing phase etc.
 @param wl: window left end in Fourier space
 @param wr: window right end in Fourier space
 """
-def ComputeCalibration(beads, rf=15, wl=1, wr=30):
+def ComputeCalibration(beads, rf=7, wl=4, wr=40):
     global Rf, Wl, Wr
     Rf = rf
     Wl = wl

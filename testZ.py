@@ -13,7 +13,7 @@ circles = utils.HoughCircles(mm.Get(), 15, 30)
 
 # beads = [T.Bead(circles[0][0], circles[0][1]), T.Bead(circles[1][0], circles[1][1])]
 
-beads = [T.Bead(179, 378), T.Bead(307, 231)]
+beads = [T.Bead(175, 368), T.Bead(305, 220)]
 
 n = len(beads)
 print(n, "Beads:", beads)

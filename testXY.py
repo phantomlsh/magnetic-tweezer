@@ -23,6 +23,7 @@ for loop in range(1000):
     img = mm.Get()
     ts.append(time.time() - start)
     T.XY(beads, [img])
+    time.sleep(0.02)
     for i in range(n):
         xss[i].append(beads[i].x)
 

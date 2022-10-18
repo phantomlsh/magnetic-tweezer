@@ -23,7 +23,7 @@ Global params initialization
 @param nθ: sampling number in polar direction
 @param nr: sampling number in radial direction
 """
-def SetParams(r=40, nr=80, nθ=80, maxn=30, maxm=2, maxz=100):
+def SetParams(r=30, nr=80, nθ=80, maxn=30, maxm=2, maxz=100):
     global R, L, freq, Nr, Nθ, Fr, Fθ
     R = r
     L = r * 2
@@ -81,21 +81,7 @@ def _fitZero(x1: ti.f32, x2: ti.f32, x3: ti.f32, x4: ti.f32, x5: ti.f32, y1: ti.
     return -b/k
 
 @ti.func
-def _normalize(arr: ti.template(), ζ: ti.i32, d: ti.i32):
-    for μ in range(ζ):
-        maxx = 0.0
-        minx = 999.0
-        for t in range(d): # find max and min, serialized
-            if (arr[μ, t] > maxx):
-                maxx = arr[μ, t]
-            if (arr[μ, t] < minx):
-                minx = arr[μ, t]
-        for t in range(d):
-            arr[μ, t] = (arr[μ, t] - minx) * 2 / (maxx - minx) - 1
-
-@ti.func
 def _cX(ζ: ti.i32, d: ti.i32): # d = 0(X)|1(Y)
-    _normalize(_x, ζ, 2*R)
     # correlate
     for μ, k in ti.ndrange(ζ, 30):
         _cx[μ, k] = 0
@@ -125,7 +111,6 @@ def _profile(ζ: ti.i32):
         x = R+5 + _p[μ, 0] + Fr * r * ti.cos(θ * Fθ)
         y = R+5 + _p[μ, 1] + Fr * r * ti.sin(θ * Fθ)
         _I[μ, r] += _BI(μ, x, y) / Nθ
-    _normalize(_I, ζ, Nr)
 
 @ti.func
 def _tilde(ζ: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32):
@@ -259,7 +244,7 @@ Finalize calibration by computing phase etc.
 @param wl: window left end in Fourier space
 @param wr: window right end in Fourier space
 """
-def ComputeCalibration(beads, rf=10, wl=3, wr=30):
+def ComputeCalibration(beads, rf=5, wl=4, wr=30):
     global Rf, Wl, Wr, Nz
     Rf = rf
     Wl = wl
