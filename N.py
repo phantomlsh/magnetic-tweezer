@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 π = np.pi
 
@@ -54,14 +53,14 @@ def profile(beads, img):
     for b in beads:
         b.profile = np.average(bilinearInterpolate(img, sxs + b.x, sys + b.y).reshape((Nθ, Nr)), axis=0)
 
-def tilde(I):
+def tilde(I, rf, wl, wr):
     I = np.append(np.flip(I), I)
     Iq = np.fft.fft(I)
     l = len(Iq)
-    win = np.append(np.zeros(Wl), np.hanning(Wr-Wl))
-    win = np.append(win, np.zeros(l-Wr))
+    win = np.append(np.zeros(wl), np.hanning(wr-wl))
+    win = np.append(win, np.zeros(l-wr))
     It = np.fft.ifft(Iq*win)
-    return It[Rf+(len(It)//2):len(It)]
+    return It[rf+(len(It)//2):len(It)]
 
 """
 Calculate XY Position
@@ -107,21 +106,14 @@ def Calibrate(beads, imgs, z):
 """
 Finalize calibration by computing phase etc.
 @param beads: list of beads
-@param rf: forget radius
-@param wl: window left end in Fourier space
-@param wr: window right end in Fourier space
 """
-def ComputeCalibration(beads, rf=7, wl=4, wr=40):
-    global Rf, Wl, Wr
-    Rf = rf
-    Wl = wl
-    Wr = wr
+def ComputeCalibration(beads):
     for b in beads:
         b.Rc = [] # real part
         b.Φc = [] # phase angle
         b.Ac = [] # amplitude
         for I in b.Ic:
-            It = tilde(I)
+            It = tilde(I, b.rf, b.wl, b.wr)
             b.Rc.append(np.real(It))
             b.Φc.append(np.angle(It))
             b.Ac.append(np.abs(It))
@@ -141,7 +133,7 @@ def XYZ(beads, imgs):
         XY(beads, [img])
         profile(beads, img)
         for b in beads:
-            It = tilde(b.profile)
+            It = tilde(b.profile, b.rf, b.wl, b.wr)
             Ri = np.real(It)
             Φi = np.unwrap(np.angle(It))
             Ai = np.abs(It)
@@ -160,18 +152,24 @@ def XYZ(beads, imgs):
 
 """
 Interface for beads
+@param rf: forget radius
+@param wl: window left end in Fourier space
+@param wr: window right end in Fourier space
 """
 class Bead:
-    def __init__(self, x, y):
+    def __init__(self, x, y, rf=15, wl=3, wr=40):
         self.x = x
         self.y = y
         self.z = 0
+        self.rf = rf
+        self.wl = wl
+        self.wr = wr
         # self calibration
         self.Ic = [] # Intensity Profiles
         self.Zc = [] # Z values
 
     def __repr__(self):
-        return f"Bead({self.x}, {self.y}, {self.z})"
+        return f"Bead({self.x}, {self.y}, {self.z}, rf={self.rf}, wl={self.wl}, wr={self.wr})"
 
     def __str__(self):
-        return f"Bead({self.x}, {self.y}, {self.z})"
+        return f"Bead({self.x}, {self.y}, {self.z}, rf={self.rf}, wl={self.wl}, wr={self.wr})"

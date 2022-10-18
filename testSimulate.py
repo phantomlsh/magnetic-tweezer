@@ -14,7 +14,7 @@ for i in range(20):
 img = np.ndarray(shape)
 simulate.Generate(50, 50, 60, 4, img)
 
-maxn = 5
+maxn = 20
 loopRange = range(1, maxn)
 
 if (True):
@@ -34,14 +34,14 @@ if (True):
 
         start = time.time()
         for i in range(100):
-            T.XYZ(beads, [img, img, img, img, img, img, img, img, img, img, img])
+            T.XYZ(beads, [img])
         ts.append(time.time() - start)
 
     print(ts)
     plt.plot(loopRange, np.array(ts), marker="o", label="GPU - Taichi")
     print(np.polynomial.polynomial.polyfit(loopRange[1:], ts[1:], 1))
 
-if (False):
+if (True):
     ts = []
     for loop in loopRange:
         beads = []
@@ -59,7 +59,7 @@ if (False):
 
         start = time.time()
         for i in range(100):
-            N.XYZ(beads, [img, img])
+            N.XYZ(beads, [img])
         ts.append(time.time() - start)
 
     print(ts)

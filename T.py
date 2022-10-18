@@ -12,7 +12,6 @@ _func: Taichi functions, called in Taichi scope
 
 import numpy as np
 import taichi as ti
-import matplotlib.pyplot as plt
 
 ti.init(arch=ti.gpu)
 π = np.pi
@@ -24,17 +23,15 @@ Global params initialization
 @param nr: sampling number in radial direction
 """
 def SetParams(r=30, nr=80, nθ=80, maxn=30, maxm=2, maxz=100):
-    global R, L, freq, Nr, Nθ, Fr, Fθ
+    global R, L, Nr, Nθ, Fr, Fθ
     R = r
     L = r * 2
-    freq = np.fft.rfftfreq(L*2)
-    R = r
     Nr = nr
     Nθ = nθ
     Fr = R/Nr
     Fθ = 2*π/Nθ
     maxζ = maxn * maxm
-    global _im, _p, _I, _J, _Z, _Φ, _A, _R, _Iq, _x, _cx
+    global _im, _p, _I, _J, _Z, _Φ, _A, _R, _cp, _Iq, _x, _cx
     _im = ti.field(dtype=ti.i32, shape=(maxζ, 2*R+10, 2*R+10)) # img grid
     _p = ti.field(dtype=ti.f32, shape=(maxζ, 3)) # points
     _I = ti.field(dtype=ti.f32, shape=(maxζ, Nr)) # intensity
@@ -43,6 +40,7 @@ def SetParams(r=30, nr=80, nθ=80, maxn=30, maxm=2, maxz=100):
     _Φ = ti.field(dtype=ti.f32, shape=(maxn, maxz, Nr)) # calibration angle
     _A = ti.field(dtype=ti.f32, shape=(maxn, maxz, Nr)) # calibration amplitude
     _R = ti.field(dtype=ti.f32, shape=(maxn, maxz, Nr)) # calibration real
+    _cp = ti.field(dtype=ti.i32, shape=(maxn, 3)) # calibration params
     # caches
     _Iq = ti.field(dtype=ti.f32, shape=(maxζ, Nr)) # fourier space
     _x = ti.field(dtype=ti.f32, shape=(maxζ, 2*R))
@@ -113,24 +111,30 @@ def _profile(ζ: ti.i32):
         _I[μ, r] += _BI(μ, x, y) / Nθ
 
 @ti.func
-def _tilde(ζ: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32):
+def _tilde(n: ti.i32, m: ti.i32):
     l = 2 * Nr
-    for μ, k in ti.ndrange(ζ, (wl, wr)):
-        _Iq[μ, k] = 0
-    for μ, k, r in ti.ndrange(ζ, (wl, wr), l):
-        _Iq[μ, k] += _I[μ, ti.abs(Nr-r)] * ti.cos(2*π*k*r/l) * (0.5 - 0.5 * ti.cos(2*π*(k-wl)/(wr-wl-1)))
+    ζ = n * m
     for μ, r in ti.ndrange(ζ, Nr):
+        _Iq[μ, r] = 0
         _I[μ, r] = 0
         _J[μ, r] = 0
-    for μ, k, r in ti.ndrange(ζ, (wl, wr), (rf, Nr)):
-        _I[μ, r] += _Iq[μ, k] * ti.cos(2*π*k*(r+Nr)/l) / l
-        _J[μ, r] += _Iq[μ, k] * ti.sin(2*π*k*(r+Nr)/l) / l
+    for i, j, r in ti.ndrange(n, m, l):
+        wl = _cp[i, 1]
+        wr = _cp[i, 2]
+        μ = j * n + i
+        for k in range(wl, wr):
+            _Iq[μ, k] += _I[μ, ti.abs(Nr-r)] * ti.cos(2*π*k*r/l) * (0.5 - 0.5 * ti.cos(2*π*(k-wl)/(wr-wl-1)))
+    for i, j in ti.ndrange(n, m):
+        μ = j * n + i
+        for k, r in ti.ndrange((_cp[i, 1],_cp[i, 2]), (_cp[i, 0], Nr)):
+            _I[μ, r] += _Iq[μ, k] * ti.cos(2*π*k*(r+Nr)/l) / l
+            _J[μ, r] += _Iq[μ, k] * ti.sin(2*π*k*(r+Nr)/l) / l
 
 @ti.func
 def _ΔΦ(μ: ti.i32, i: ti.i32, z: ti.i32) -> ti.f32:
     s = 0.0
     t = 0.0
-    for r in range(Rf, Nr):
+    for r in range(_cp[i, 0], Nr):
         Δ = (ti.atan2(_J[μ, r], _I[μ, r]) - _Φ[i, z, r]) % (2*π)
         if (Δ > π):
             Δ -= 2*π
@@ -140,9 +144,10 @@ def _ΔΦ(μ: ti.i32, i: ti.i32, z: ti.i32) -> ti.f32:
     return s / t
 
 @ti.func
-def __Z(n: ti.i32, m: ti.i32, rf: ti.i32, nz: ti.i32):
+def __Z(n: ti.i32, m: ti.i32, nz: ti.i32):
     for i, j in ti.ndrange(n, m):
         μ = j * n + i
+        rf = _cp[i, 0]
         z0 = 0
         minχ2 = 999999999.0
         for z in range(nz):
@@ -161,16 +166,16 @@ def tiProfile(ζ: ti.i32):
     _profile(ζ)
 
 @ti.kernel # for ComputeCalibration
-def tiTilde(ζ: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32):
-    _tilde(ζ, rf, wl, wr)
+def tiTilde(n: ti.i32, m: ti.i32):
+    _tilde(n, m)
 
 @ti.kernel
-def tiXYZ(n: ti.i32, m: ti.i32, rf: ti.i32, wl: ti.i32, wr: ti.i32, nz: ti.i32):
+def tiXYZ(n: ti.i32, m: ti.i32, nz: ti.i32):
     _XY(n * m)
     _XY(n * m)
     _profile(n * m)
-    _tilde(n * m, rf, wl, wr)
-    __Z(n, m, rf, nz)
+    _tilde(n, m)
+    __Z(n, m, nz)
 
 # load data into taichi scope
 # @return number of beads, number of images
@@ -240,23 +245,23 @@ def Calibrate(beads, imgs, z):
 """
 Finalize calibration by computing phase etc.
 @param beads: list of beads
-@param rf: forget radius
-@param wl: window left end in Fourier space
-@param wr: window right end in Fourier space
 """
-def ComputeCalibration(beads, rf=5, wl=4, wr=30):
-    global Rf, Wl, Wr, Nz
-    Rf = rf
-    Wl = wl
-    Wr = wr
+def ComputeCalibration(beads):
+    global Nz
     n = len(beads)
     if (n == 0):
         return
+    Nz = len(beads[0].Zc)
+    maxn = _A.shape[0]
+    maxz = _Z.shape[0]
+    cp = [] # load calibration params
     for b in beads:
         b.Rc = [] # real part
         b.Φc = [] # phase angle
         b.Ac = [] # amplitude
-    Nz = len(beads[0].Zc)
+        cp.append([b.rf, b.wl, b.wr])
+    cp = np.pad(cp, ((0, maxn-n), (0, 0)))
+    _cp.from_numpy(cp)
     for z in range(Nz):
         I = []
         for i in range(_I.shape[0]):
@@ -265,15 +270,16 @@ def ComputeCalibration(beads, rf=5, wl=4, wr=30):
             else:
                 I.append(np.zeros(Nr))
         _I.from_numpy(np.array(I, dtype=np.float32))
-        tiTilde(n, rf, wl, wr)
+        tiTilde(n, 1)
         I = _I.to_numpy()
         J = _J.to_numpy()
         for i in range(n):
-            Ii = I[i][Rf:]
-            Ji = J[i][Rf:]
-            beads[i].Rc.append(Ii)
-            beads[i].Φc.append(np.arctan2(Ji, Ii))
-            beads[i].Ac.append(np.sqrt(Ii**2 + Ji**2))
+            b = beads[i]
+            Ii = I[i]
+            Ji = J[i]
+            b.Rc.append(Ii)
+            b.Φc.append(np.arctan2(Ji, Ii))
+            b.Ac.append(np.sqrt(Ii**2 + Ji**2))
     Zc = []
     Φc = []
     Ac = []
@@ -288,12 +294,10 @@ def ComputeCalibration(beads, rf=5, wl=4, wr=30):
         Φc.append(b.Φc)
         Ac.append(b.Ac)
         Rc.append(b.Rc)
-    maxn = _A.shape[0]
-    maxz = _Z.shape[0]
     Zc = np.pad(Zc, (0, maxz-Nz))
-    Φc = np.pad(Φc, ((0, maxn-n), (0, maxz-Nz), (Rf, 0)))
-    Ac = np.pad(Ac, ((0, maxn-n), (0, maxz-Nz), (Rf, 0)))
-    Rc = np.pad(Rc, ((0, maxn-n), (0, maxz-Nz), (Rf, 0)))
+    Φc = np.pad(Φc, ((0, maxn-n), (0, maxz-Nz), (0, 0)))
+    Ac = np.pad(Ac, ((0, maxn-n), (0, maxz-Nz), (0, 0)))
+    Rc = np.pad(Rc, ((0, maxn-n), (0, maxz-Nz), (0, 0)))
     _Z.from_numpy(Zc.astype(np.float32))
     _Φ.from_numpy(Φc.astype(np.float32))
     _A.from_numpy(Ac.astype(np.float32))
@@ -307,7 +311,7 @@ Calculate XYZ Position (cover XY)
 """
 def XYZ(beads, imgs):
     n, m = load(beads, imgs)
-    tiXYZ(n, m, Rf, Wl, Wr, Nz)
+    tiXYZ(n, m, Nz)
     p = _p.to_numpy()
     bp = []
     for b in beads:
@@ -326,18 +330,24 @@ def XYZ(beads, imgs):
 
 """
 Interface for beads
+@param rf: forget radius
+@param wl: window left end in Fourier space
+@param wr: window right end in Fourier space
 """
 class Bead:
-    def __init__(self, x, y):
+    def __init__(self, x, y, rf=15, wl=3, wr=40):
         self.x = x
         self.y = y
         self.z = 0
+        self.rf = rf
+        self.wl = wl
+        self.wr = wr
         # self calibration
         self.Ic = [] # Intensity Profiles
         self.Zc = [] # Z values
 
     def __repr__(self):
-        return f"Bead({self.x}, {self.y}, {self.z})"
+        return f"Bead({self.x}, {self.y}, {self.z}, rf={self.rf}, wl={self.wl}, wr={self.wr})"
 
     def __str__(self):
-        return f"Bead({self.x}, {self.y}, {self.z})"
+        return f"Bead({self.x}, {self.y}, {self.z}, rf={self.rf}, wl={self.wl}, wr={self.wr})"
