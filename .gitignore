@@ -132,4 +132,4 @@ dmypy.json
 *.ipynb
 
 # data
-*.dat
+data

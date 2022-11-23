@@ -117,8 +117,6 @@ def ComputeCalibration(beads):
             b.Rc.append(np.real(It))
             b.Φc.append(np.angle(It))
             b.Ac.append(np.abs(It))
-        b.Φc = np.unwrap(b.Φc, axis=0)
-        b.Φc = np.unwrap(b.Φc, axis=1)
 
 """
 Calculate XYZ Position
@@ -139,11 +137,9 @@ def XYZ(beads, imgs):
             Ai = np.abs(It)
             χ2 = np.sum((Ri-b.Rc)**2, axis=1)
             i = np.argmin(χ2)
-            while Φi[5] - b.Φc[i][5] > 3:
-                Φi = Φi - 2*π
-            while Φi[5] - b.Φc[i][5] < -3:
-                Φi = Φi + 2*π
-            ΔΦ = np.average(Φi-b.Φc[i-3:i+4], axis=1, weights=Ai*b.Ac[i-3:i+4])
+            ΔΦ = (Φi-b.Φc[i-3:i+4]) % (2*π)
+            np.subtract(ΔΦ, 2*π, out=ΔΦ, where=ΔΦ>π)
+            ΔΦ = np.average(ΔΦ, axis=1, weights=Ai*b.Ac[i-3:i+4])
             p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 1)
             b.z = -p[0]/p[1]
             r.append([b.x, b.y, b.z])
@@ -156,7 +152,7 @@ Interface for beads
 @param w: window in Fourier space
 """
 class Bead:
-    def __init__(self, x, y, rf=15, w=[3, 40]):
+    def __init__(self, x, y, rf=10, w=[2, 40]):
         self.x = x
         self.y = y
         self.z = 0

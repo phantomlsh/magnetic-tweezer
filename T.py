@@ -116,14 +116,15 @@ def _tilde(n: ti.i32, m: ti.i32):
     ζ = n * m
     for μ, r in ti.ndrange(ζ, Nr):
         _Iq[μ, r] = 0
-        _I[μ, r] = 0
-        _J[μ, r] = 0
     for i, j, r in ti.ndrange(n, m, l):
         wl = _cp[i, 1]
         wr = _cp[i, 2]
         μ = j * n + i
         for k in range(wl, wr):
             _Iq[μ, k] += _I[μ, ti.abs(Nr-r)] * ti.cos(2*π*k*r/l) * (0.5 - 0.5 * ti.cos(2*π*(k-wl)/(wr-wl-1)))
+    for μ, r in ti.ndrange(ζ, Nr):
+        _I[μ, r] = 0
+        _J[μ, r] = 0
     for i, j in ti.ndrange(n, m):
         μ = j * n + i
         for k, r in ti.ndrange((_cp[i, 1],_cp[i, 2]), (_cp[i, 0], Nr)):
@@ -275,11 +276,9 @@ def ComputeCalibration(beads):
         J = _J.to_numpy()
         for i in range(n):
             b = beads[i]
-            Ii = I[i]
-            Ji = J[i]
-            b.Rc.append(Ii)
-            b.Φc.append(np.arctan2(Ji, Ii))
-            b.Ac.append(np.sqrt(Ii**2 + Ji**2))
+            b.Rc.append(I[i])
+            b.Φc.append(np.arctan2(J[i], I[i]))
+            b.Ac.append(np.sqrt(I[i]**2 + J[i]**2))
     Zc = []
     Φc = []
     Ac = []

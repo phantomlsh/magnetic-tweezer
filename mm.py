@@ -19,15 +19,15 @@ core.snap_image()
 tagged_image = core.get_tagged_image()
 Height = tagged_image.tags["Height"]
 Width = tagged_image.tags["Width"]
-print("Initializing...")
-print("Width =", Width, " Height =", Height)
+print("Mi(Py)croManager Initializing...")
+print("Acquisition Size: Width =", Width, " Height =", Height)
 
 core.start_continuous_sequence_acquisition(1)
 time.sleep(1)
 
 def exit_handler():
     core.stop_sequence_acquisition()
-    print("Exiting...")
+    print("Mi(Py)croManager Exiting...")
 
 atexit.register(exit_handler)
 
