@@ -3,8 +3,8 @@ import random
 
 def Generate(X, Y, Z, λ, img):
   L = 100
-  for x in range(L):
-    for y in range(L):
+  for x in range(X-L, X+L):
+    for y in range(Y-L, Y+L):
       r = sqrt((x-X)**2 + (y-Y)**2 + Z**2)
       n = (r-Z)/λ
       ϕ = 2*π*(n - floor(n) - 0.5)

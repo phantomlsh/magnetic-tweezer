@@ -114,20 +114,20 @@ def _profile(ζ: ti.i32):
 def _tilde(n: ti.i32, m: ti.i32):
     l = 2 * Nr
     ζ = n * m
-    for μ, r in ti.ndrange(ζ, Nr):
-        _Iq[μ, r] = 0
-    for i, j, r in ti.ndrange(n, m, l):
+    for μ, k in ti.ndrange(ζ, Nr):
+        _Iq[μ, k] = 0
+    for i, j, r in ti.ndrange(n, m, Nr):
         wl = _cp[i, 1]
         wr = _cp[i, 2]
         μ = j * n + i
-        for k in range(wl, wr):
-            _Iq[μ, k] += _I[μ, ti.abs(Nr-r)] * ti.cos(2*π*k*r/l) * (0.5 - 0.5 * ti.cos(2*π*(k-wl)/(wr-wl-1)))
+        for k in range(wl, wr): # Fourier transform with window
+            _Iq[μ, k] += _I[μ, r] * (ti.cos(2*π*k*(Nr-r)/l) + ti.cos(2*π*k*(Nr+r)/l)) * (0.5 - 0.5 * ti.cos(2*π*(k-wl)/(wr-wl-1)))
     for μ, r in ti.ndrange(ζ, Nr):
         _I[μ, r] = 0
         _J[μ, r] = 0
     for i, j in ti.ndrange(n, m):
         μ = j * n + i
-        for k, r in ti.ndrange((_cp[i, 1],_cp[i, 2]), (_cp[i, 0], Nr)):
+        for k, r in ti.ndrange((_cp[i, 1], _cp[i, 2]), (_cp[i, 0], Nr)):
             _I[μ, r] += _Iq[μ, k] * ti.cos(2*π*k*(r+Nr)/l) / l
             _J[μ, r] += _Iq[μ, k] * ti.sin(2*π*k*(r+Nr)/l) / l
 
@@ -286,10 +286,8 @@ def ComputeCalibration(beads):
     for b in beads:
         b.Rc = np.array(b.Rc)
         b.Ac = np.array(b.Ac)
-        b.Φc = (np.array(b.Φc) + 2*π) % (2*π)
-        b.Φc = np.unwrap(b.Φc, axis=0)
-        b.Φc = np.unwrap(b.Φc, axis=1)
-        Zc = b.Zc
+        b.Φc = np.array(b.Φc)
+        Zc = b.Zc # 1d array
         Φc.append(b.Φc)
         Ac.append(b.Ac)
         Rc.append(b.Rc)
@@ -333,7 +331,7 @@ Interface for beads
 @param w: window in Fourier space
 """
 class Bead:
-    def __init__(self, x, y, rf=15, w=[3, 40]):
+    def __init__(self, x, y, rf=10, w=[2, 40]):
         self.x = x
         self.y = y
         self.z = 0

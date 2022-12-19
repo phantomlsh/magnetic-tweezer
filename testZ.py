@@ -2,10 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time, mm
 import cv2 as cv
-import N as T
+import T as T
 
 zcs = np.arange(0, 10000, 100)
-beads = [T.Bead(360, 273)]
+beads = [T.Bead(504, 376)]
 n = len(beads)
 
 sz = mm.GetZ()
@@ -24,8 +24,9 @@ for i in range(len(zcs)):
 
 mm.SetZ(sz)
 T.ComputeCalibration(beads)
-# cv.imwrite("data/C1.png", np.array(beads[0].Ic))
-fig, (ax1, ax2) = plt.subplots(1, 2)
+fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
+ax0.set_title("Profile")
+ax0.imshow(np.flip(beads[0].Ic, axis=0), cmap="gray")
 ax1.set_title("Real Part")
 ax1.imshow(np.flip(beads[0].Rc, axis=0), cmap="gray")
 ax2.set_title("Phase")
@@ -58,11 +59,6 @@ plt.errorbar(xs, ys, yerr=yerr, marker="o", capsize=3)
 plt.title('Bias in Z tracking')
 plt.xlabel('Z(nm)')
 plt.ylabel('Bias(nm)')
-plt.show()
-
-plt.title("Phase Difference in Neighborhood")
-print(T.ΔΦs)
-plt.imshow(T.ΔΦs)
 plt.show()
 
 mm.SetZ(sz)
