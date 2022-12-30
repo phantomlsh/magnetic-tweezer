@@ -22,3 +22,13 @@ def HoughCircles(image, minRadius, maxRadius):
     if (circles is None):
         return []
     return circles[0]
+
+def PlotCalibration(bead):
+    fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
+    ax0.set_title("Profile")
+    ax0.imshow(np.flip(bead.Ic, axis=0), cmap="gray")
+    ax1.set_title("Real Part")
+    ax1.imshow(np.flip(bead.Rc, axis=0), cmap="gray")
+    ax2.set_title("Phase")
+    ax2.imshow(np.flip(bead.Φc, axis=0))
+    plt.show()

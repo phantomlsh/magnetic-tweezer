@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import time, mm
+import time, mm, utils
 import cv2 as cv
 import T as T
 
 zcs = np.arange(0, 10000, 100)
-beads = [T.Bead(504, 376)]
+beads = [T.Bead(484, 422)]
 n = len(beads)
 
 sz = mm.GetZ()
@@ -24,14 +24,6 @@ for i in range(len(zcs)):
 
 mm.SetZ(sz)
 T.ComputeCalibration(beads)
-fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
-ax0.set_title("Profile")
-ax0.imshow(np.flip(beads[0].Ic, axis=0), cmap="gray")
-ax1.set_title("Real Part")
-ax1.imshow(np.flip(beads[0].Rc, axis=0), cmap="gray")
-ax2.set_title("Phase")
-ax2.imshow(np.flip(beads[0].Φc, axis=0))
-plt.show()
 
 # test
 zts = np.arange(500, 9500, 50)
@@ -53,6 +45,8 @@ for i, z in enumerate(zts):
     xs.append(x)
     ys.append(np.mean(data) - x)
     yerr.append(np.std(data))
+
+utils.PlotCalibration(beads[0])
 
 plt.grid()
 plt.errorbar(xs, ys, yerr=yerr, marker="o", capsize=3)

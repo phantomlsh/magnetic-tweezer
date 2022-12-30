@@ -140,6 +140,8 @@ def XYZ(beads, imgs):
             ΔΦ = (Φi-b.Φc[i-3:i+4]) % (2*π)
             np.subtract(ΔΦ, 2*π, out=ΔΦ, where=ΔΦ>π)
             ΔΦ = np.average(ΔΦ, axis=1, weights=Ai*b.Ac[i-3:i+4])
+            # p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 2)
+            # b.z = (-p[1]+np.sqrt(p[1]**2 - 4*p[2]*p[0]))/p[2]/2
             p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 1)
             b.z = -p[0]/p[1]
             r.append([b.x, b.y, b.z])

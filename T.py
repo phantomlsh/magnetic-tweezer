@@ -32,7 +32,7 @@ def SetParams(r=30, nr=80, nθ=80, maxn=30, maxm=2, maxz=100):
     Fθ = 2*π/Nθ
     maxζ = maxn * maxm
     global _im, _p, _I, _J, _Z, _Φ, _A, _R, _cp, _Iq, _x, _cx
-    _im = ti.field(dtype=ti.i32, shape=(maxζ, 2*R+10, 2*R+10)) # img grid
+    _im = ti.field(dtype=ti.i32, shape=(maxζ, L+10, L+10)) # img grid
     _p = ti.field(dtype=ti.f32, shape=(maxζ, 3)) # points
     _I = ti.field(dtype=ti.f32, shape=(maxζ, Nr)) # intensity
     _J = ti.field(dtype=ti.f32, shape=(maxζ, Nr)) # imaginary part
@@ -43,8 +43,8 @@ def SetParams(r=30, nr=80, nθ=80, maxn=30, maxm=2, maxz=100):
     _cp = ti.field(dtype=ti.i32, shape=(maxn, 3)) # calibration params
     # caches
     _Iq = ti.field(dtype=ti.f32, shape=(maxζ, Nr)) # fourier space
-    _x = ti.field(dtype=ti.f32, shape=(maxζ, 2*R))
-    _cx = ti.field(dtype=ti.f32, shape=(maxζ, 30))
+    _x = ti.field(dtype=ti.f32, shape=(maxζ, L))
+    _cx = ti.field(dtype=ti.f32, shape=(maxζ, 50))
 
 SetParams()
 
@@ -81,24 +81,24 @@ def _fitZero(x1: ti.f32, x2: ti.f32, x3: ti.f32, x4: ti.f32, x5: ti.f32, y1: ti.
 @ti.func
 def _cX(ζ: ti.i32, d: ti.i32): # d = 0(X)|1(Y)
     # correlate
-    for μ, k in ti.ndrange(ζ, 30):
+    for μ, k in ti.ndrange(ζ, 50):
         _cx[μ, k] = 0
-    for μ, k, l in ti.ndrange(ζ, 30, 2*R):
-        _cx[μ, k] += _x[μ, l] * _x[μ, k - l + L - 16]
+    for μ, k, l in ti.ndrange(ζ, 50, L):
+        _cx[μ, k] += _x[μ, l] * _x[μ, k - l + L - 26]
     for μ in range(ζ): # find max in correlate and fit
-        x = 15
-        for t in range(30):
+        x = 25
+        for t in range(50):
             if _cx[μ, t] > _cx[μ, x]:
                 x = t
-        _p[μ, d] += (x - 15 + _fitCenter(_cx[μ, x-2], _cx[μ, x-1], _cx[μ, x], _cx[μ, x+1], _cx[μ, x+2])) / 2
+        _p[μ, d] += (x - 25 + _fitCenter(_cx[μ, x-2], _cx[μ, x-1], _cx[μ, x], _cx[μ, x+1], _cx[μ, x+2])) / 2
 
 @ti.func
 def _XY(ζ: ti.i32):
-    for μ, t in ti.ndrange(ζ, (5, 2*R+5)): # sample slice x
-        _x[μ, t-5] = _BI(μ, t + _p[μ, 0], R+4) + _BI(μ, t + _p[μ, 0], R+5) + _BI(μ, t + _p[μ, 0], R+6)
+    for μ, t in ti.ndrange(ζ, (5, L+5)): # sample slice x
+        _x[μ, t-5] = _BI(μ, t + _p[μ, 0], R+4.3) + _BI(μ, t + _p[μ, 0], R+5) + _BI(μ, t + _p[μ, 0], R+5.7)
     _cX(ζ, 0)
-    for μ, t in ti.ndrange(ζ, (5, 2*R+5)): # sample slice y
-        _x[μ, t-5] = _BI(μ, R+4, t + _p[μ, 1]) + _BI(μ, R+5, t + _p[μ, 1]) + _BI(μ, R+6, t + _p[μ, 1])
+    for μ, t in ti.ndrange(ζ, (5, L+5)): # sample slice y
+        _x[μ, t-5] = _BI(μ, R+4.3, t + _p[μ, 1]) + _BI(μ, R+5, t + _p[μ, 1]) + _BI(μ, R+5.7, t + _p[μ, 1])
     _cX(ζ, 1)
 
 @ti.func
@@ -121,7 +121,7 @@ def _tilde(n: ti.i32, m: ti.i32):
         wr = _cp[i, 2]
         μ = j * n + i
         for k in range(wl, wr): # Fourier transform with window
-            _Iq[μ, k] += _I[μ, r] * (ti.cos(2*π*k*(Nr-r)/l) + ti.cos(2*π*k*(Nr+r)/l)) * (0.5 - 0.5 * ti.cos(2*π*(k-wl)/(wr-wl-1)))
+            _Iq[μ, k] += _I[μ, r] * (ti.cos(2*π*k*(Nr-r-1)/l) + ti.cos(2*π*k*(Nr+r)/l)) * (0.5 - 0.5 * ti.cos(2*π*(k-wl)/(wr-wl-1)))
     for μ, r in ti.ndrange(ζ, Nr):
         _I[μ, r] = 0
         _J[μ, r] = 0
