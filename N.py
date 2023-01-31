@@ -8,7 +8,7 @@ Global params initialization
 @param nθ: sampling number in polar direction
 @param nr: sampling number in radial direction
 """
-def SetParams(r=30, nr=80, nθ=80):
+def SetParams(r=35, nr=80, nθ=80):
     global R, L, freq, Nr, Nθ, sxs, sys
     R = r
     L = r * 2
@@ -140,8 +140,6 @@ def XYZ(beads, imgs):
             ΔΦ = (Φi-b.Φc[i-3:i+4]) % (2*π)
             np.subtract(ΔΦ, 2*π, out=ΔΦ, where=ΔΦ>π)
             ΔΦ = np.average(ΔΦ, axis=1, weights=Ai*b.Ac[i-3:i+4])
-            # p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 2)
-            # b.z = (-p[1]+np.sqrt(p[1]**2 - 4*p[2]*p[0]))/p[2]/2
             p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 1)
             b.z = -p[0]/p[1]
             r.append([b.x, b.y, b.z])

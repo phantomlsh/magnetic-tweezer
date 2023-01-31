@@ -13,7 +13,7 @@ _func: Taichi functions, called in Taichi scope
 import numpy as np
 import taichi as ti
 
-ti.init(arch=ti.gpu)
+ti.init(arch=ti.cpu)
 π = np.pi
 
 """
@@ -22,7 +22,7 @@ Global params initialization
 @param nθ: sampling number in polar direction
 @param nr: sampling number in radial direction
 """
-def SetParams(r=30, nr=80, nθ=80, maxn=30, maxm=2, maxz=100):
+def SetParams(r=35, nr=80, nθ=80, maxn=30, maxm=2, maxz=100):
     global R, L, Nr, Nθ, Fr, Fθ
     R = r
     L = r * 2
@@ -180,7 +180,7 @@ def tiXYZ(n: ti.i32, m: ti.i32, nz: ti.i32):
 
 # load data into taichi scope
 # @return number of beads, number of images
-def load(beads, imgs, pos=True):
+def load(beads, imgs):
     n = len(beads)
     m = len(imgs)
     maxζ = _im.shape[0]
@@ -188,8 +188,8 @@ def load(beads, imgs, pos=True):
         raise Exception("Insufficient Capacity")
     im = []
     p = []
-    for img in imgs:
-        for b in beads:
+    for img in imgs: # m
+        for b in beads: # n
             x = int(b.x)
             y = int(b.y)
             im.append(img[y-R-5:y+R+5, x-R-5:x+R+5])
@@ -207,9 +207,13 @@ Calculate XY Position
 @return: [[[x1, y1], [x2, y2]], [[x1, y1], [x2, y2]]]
 """
 def XY(beads, imgs):
+    if len(beads) == 0:
+        return
     n, m = load(beads, imgs)
     tiProfile(n * m) # compute x, y, I in taichi scope
     p = _p.to_numpy()
+    # p[np.abs(p) > 10] = 0 # filter outlier
+    print(p[0], p[1])
     I = _I.to_numpy()
     bp = []
     for b in beads:
@@ -219,9 +223,9 @@ def XY(beads, imgs):
         r = []
         for i in range(n):
             b = beads[i]
-            b.x = bp[i][0] + p[i][0]
-            b.y = bp[i][1] + p[i][1]
-            b.profile = I[i]
+            b.x = bp[i][0] + p[j * n + i][0]
+            b.y = bp[i][1] + p[j * n + i][1]
+            b.profile = I[j * n + i]
             r.append([b.x, b.y])
         res.append(r)
     return res
@@ -233,6 +237,8 @@ Calculate I and store
 @param z: z position
 """
 def Calibrate(beads, imgs, z):
+    if len(beads) == 0:
+        return
     for b in beads:
         b.l = []
     for img in imgs:
@@ -307,9 +313,12 @@ Calculate XYZ Position (cover XY)
 @return: [[[x1, y1, z1], [x2, y2, z2]], [[x1, y1, z1], [x2, y2, z2]]]
 """
 def XYZ(beads, imgs):
+    if len(beads) == 0:
+        return
     n, m = load(beads, imgs)
     tiXYZ(n, m, Nz)
     p = _p.to_numpy()
+    # p[np.abs(p) > 10] = 0 # filter outlier
     bp = []
     for b in beads:
         bp.append([int(b.x), int(b.y)])
@@ -318,9 +327,9 @@ def XYZ(beads, imgs):
         r = []
         for i in range(n):
             b = beads[i]
-            b.x = bp[i][0] + p[i][0]
-            b.y = bp[i][1] + p[i][1]
-            b.z = p[i][2]
+            b.x = bp[i][0] + p[j * n + i][0]
+            b.y = bp[i][1] + p[j * n + i][1]
+            b.z = p[j * n + i][2]
             r.append([b.x, b.y, b.z])
         res.append(r)
     return res
