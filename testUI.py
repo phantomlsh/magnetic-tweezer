@@ -1,4 +1,4 @@
-import T
+import T as T
 import UI
 import mm
 

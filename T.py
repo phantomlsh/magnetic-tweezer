@@ -5,7 +5,7 @@ m: number of images in one packet
 ζ: total number, = n * m
 i: index of bead
 j: index of image
-μ: combined index, = j * n + i
+μ: combined index, = i * m + j
 tiFunc: Taichi kernels, called in Python scope
 _func: Taichi functions, called in Taichi scope
 """
@@ -84,13 +84,15 @@ def _cX(ζ: ti.i32, d: ti.i32): # d = 0(X)|1(Y)
     for μ, k in ti.ndrange(ζ, 50):
         _cx[μ, k] = 0
     for μ, k, l in ti.ndrange(ζ, 50, L):
-        _cx[μ, k] += _x[μ, l] * _x[μ, k - l + L - 26]
+        m = k - l + L - 26
+        if m > 0 and m < L:
+            _cx[μ, k] += _x[μ, l] * _x[μ, m]
     for μ in range(ζ): # find max in correlate and fit
         x = 25
         for t in range(50):
             if _cx[μ, t] > _cx[μ, x]:
                 x = t
-        _p[μ, d] += (x - 25 + _fitCenter(_cx[μ, x-2], _cx[μ, x-1], _cx[μ, x], _cx[μ, x+1], _cx[μ, x+2])) / 2
+        _p[μ, d] += (x - 25.5 + _fitCenter(_cx[μ, x-2], _cx[μ, x-1], _cx[μ, x], _cx[μ, x+1], _cx[μ, x+2])) / 2
 
 @ti.func
 def _XY(ζ: ti.i32):
@@ -119,14 +121,14 @@ def _tilde(n: ti.i32, m: ti.i32):
     for i, j, r in ti.ndrange(n, m, Nr):
         wl = _cp[i, 1]
         wr = _cp[i, 2]
-        μ = j * n + i
+        μ = i * m + j
         for k in range(wl, wr): # Fourier transform with window
             _Iq[μ, k] += _I[μ, r] * (ti.cos(2*π*k*(Nr-r-1)/l) + ti.cos(2*π*k*(Nr+r)/l)) * (0.5 - 0.5 * ti.cos(2*π*(k-wl)/(wr-wl-1)))
     for μ, r in ti.ndrange(ζ, Nr):
         _I[μ, r] = 0
         _J[μ, r] = 0
     for i, j in ti.ndrange(n, m):
-        μ = j * n + i
+        μ = i * m + j
         for k, r in ti.ndrange((_cp[i, 1], _cp[i, 2]), (_cp[i, 0], Nr)):
             _I[μ, r] += _Iq[μ, k] * ti.cos(2*π*k*(r+Nr)/l) / l
             _J[μ, r] += _Iq[μ, k] * ti.sin(2*π*k*(r+Nr)/l) / l
@@ -147,7 +149,7 @@ def _ΔΦ(μ: ti.i32, i: ti.i32, z: ti.i32) -> ti.f32:
 @ti.func
 def __Z(n: ti.i32, m: ti.i32, nz: ti.i32):
     for i, j in ti.ndrange(n, m):
-        μ = j * n + i
+        μ = i * m + j
         rf = _cp[i, 0]
         z0 = 0
         minχ2 = 999999999.0
@@ -188,8 +190,8 @@ def load(beads, imgs):
         raise Exception("Insufficient Capacity")
     im = []
     p = []
-    for img in imgs: # m
-        for b in beads: # n
+    for b in beads: # n
+        for img in imgs: # m
             x = int(b.x)
             y = int(b.y)
             im.append(img[y-R-5:y+R+5, x-R-5:x+R+5])
@@ -204,7 +206,7 @@ def load(beads, imgs):
 Calculate XY Position
 @param beads: list of beads
 @param imgs: list of 2d array of image data
-@return: [[[x1, y1], [x2, y2]], [[x1, y1], [x2, y2]]]
+@return: [Bead0 Trace, Bead1 Trace, ...]
 """
 def XY(beads, imgs):
     if len(beads) == 0:
@@ -212,22 +214,20 @@ def XY(beads, imgs):
     n, m = load(beads, imgs)
     tiProfile(n * m) # compute x, y, I in taichi scope
     p = _p.to_numpy()
-    # p[np.abs(p) > 10] = 0 # filter outlier
-    print(p[0], p[1])
     I = _I.to_numpy()
     bp = []
     for b in beads:
         bp.append([int(b.x), int(b.y)])
     res = []
-    for j in range(m):
-        r = []
-        for i in range(n):
+    for i in range(n):
+        res.append([])
+        for j in range(m):
             b = beads[i]
-            b.x = bp[i][0] + p[j * n + i][0]
-            b.y = bp[i][1] + p[j * n + i][1]
-            b.profile = I[j * n + i]
-            r.append([b.x, b.y])
-        res.append(r)
+            μ = i * m + j
+            b.x = bp[i][0] + p[μ][0]
+            b.y = bp[i][1] + p[μ][1]
+            b.profile = I[μ]
+            res[i].append([b.x, b.y])
     return res
 
 """
@@ -310,7 +310,7 @@ def ComputeCalibration(beads):
 Calculate XYZ Position (cover XY)
 @param beads: list of beads
 @param imgs: list of 2d array of image data
-@return: [[[x1, y1, z1], [x2, y2, z2]], [[x1, y1, z1], [x2, y2, z2]]]
+@return: [Bead0 Trace, Bead1 Trace, ...]
 """
 def XYZ(beads, imgs):
     if len(beads) == 0:
@@ -323,15 +323,15 @@ def XYZ(beads, imgs):
     for b in beads:
         bp.append([int(b.x), int(b.y)])
     res = []
-    for j in range(m):
-        r = []
-        for i in range(n):
+    for i in range(n):
+        res.append([])
+        for j in range(m):
             b = beads[i]
-            b.x = bp[i][0] + p[j * n + i][0]
-            b.y = bp[i][1] + p[j * n + i][1]
-            b.z = p[j * n + i][2]
-            r.append([b.x, b.y, b.z])
-        res.append(r)
+            μ = i * m + j
+            b.x = bp[i][0] + p[μ][0]
+            b.y = bp[i][1] + p[μ][1]
+            b.z = p[μ][2]
+            res[i].append([b.x, b.y, b.z])
     return res
 
 """

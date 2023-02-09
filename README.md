@@ -54,12 +54,12 @@ res = T.XYZ(beads, [img1, img2, img3])
 print(res)
 """
 [   # XYZ tracking result
-	[   # result of img1
+	[   # bead1 trace
 		[100, 120, 122.5], # bead1 in img1
-		[200, 22.2, 12.5], # bead2 in img1
+		[200, 22.2, 12.5], # bead1 in img2
 	],
-	[   # result of img2
-		[101, 120, 122.9], # bead1 in img2
+	[   # bead2 trace
+		[101, 120, 122.9], # bead2 in img1
 		[202, 20.2, 10.2], # bead2 in img2
 	],
 ]

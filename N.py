@@ -67,21 +67,22 @@ Calculate XY Position
 @param beads: list of beads
 @param imgs: list of 2d array of image data
 @param it: iteration times
-@return: [[[x1, y1], [x2, y2]], [[x1, y1], [x2, y2]]]
+@return: [Bead0 Trace, Bead1 Trace, ...]
 """
 def XY(beads, imgs, it=2):
     res = []
+    for b in beads:
+        res.append([])
     for img in imgs:
-        r = []
-        for b in beads:
+        for i in range(len(beads)):
+            b = beads[i]
             xl = int(b.x)
             yl = int(b.y)
             xline = np.sum(img[yl-2:yl+3, xl-R:xl+R], axis=0)
             yline = np.sum(img[yl-R:yl+R, xl-2:xl+3], axis=1)
             b.x = xl + centerShift(xline, it)
             b.y = yl + centerShift(yline, it)
-            r.append([b.x, b.y])
-        res.append(r)
+            res[i].append([b.x, b.y])
     return res
 
 
@@ -122,28 +123,29 @@ def ComputeCalibration(beads):
 Calculate XYZ Position
 @param beads: list of beads
 @param imgs: list of 2d array of image data
-@return: [[[x1, y1, z1], [x2, y2, z2]], [[x1, y1, z1], [x2, y2, z2]]]
+@return: [Bead0 Trace, Bead1 Trace, ...]
 """
 def XYZ(beads, imgs):
     res = []
+    for b in beads:
+        res.append([])
     for img in imgs:
-        r = []
         XY(beads, [img])
         profile(beads, img)
-        for b in beads:
+        for i in range(len(beads)):
+            b = beads[i]
             It = tilde(b.profile, b.rf, b.w)
             Ri = np.real(It)
             Φi = np.unwrap(np.angle(It))
             Ai = np.abs(It)
             χ2 = np.sum((Ri-b.Rc)**2, axis=1)
-            i = np.argmin(χ2)
-            ΔΦ = (Φi-b.Φc[i-3:i+4]) % (2*π)
+            x = np.argmin(χ2)
+            ΔΦ = (Φi-b.Φc[x-3:x+4]) % (2*π)
             np.subtract(ΔΦ, 2*π, out=ΔΦ, where=ΔΦ>π)
-            ΔΦ = np.average(ΔΦ, axis=1, weights=Ai*b.Ac[i-3:i+4])
-            p = np.polynomial.polynomial.polyfit(b.Zc[i-3:i+4], ΔΦ, 1)
+            ΔΦ = np.average(ΔΦ, axis=1, weights=Ai*b.Ac[x-3:x+4])
+            p = np.polynomial.polynomial.polyfit(b.Zc[x-3:x+4], ΔΦ, 1)
             b.z = -p[0]/p[1]
-            r.append([b.x, b.y, b.z])
-        res.append(r)
+            res[i].append([b.x, b.y, b.z])
     return res
 
 """
