@@ -32,3 +32,17 @@ def PlotCalibration(bead):
     ax2.set_title("Phase")
     ax2.imshow(np.flip(bead.Φc, axis=0))
     plt.show()
+
+def PlotXY(trace, s=1):
+    t = np.transpose(np.array(trace))
+    x = t[0] - np.mean(t[0])
+    y = t[1] - np.mean(t[1])
+    r = max(np.abs(x).max(), np.abs(y).max())
+    plt.scatter(x, y, s)
+    plt.xlim([-r, r])
+    plt.ylim([-r, r])
+    plt.xlabel("X(px) %.2f" % np.mean(t[0]))
+    plt.ylabel("Y(px) %.2f" % np.mean(t[1]))
+    plt.title("XY Scatter")
+    plt.grid()
+    plt.show()
