@@ -64,3 +64,27 @@ def Calibrate(beads, T, getImg, getZ, setZ, Nz=100, step=100, m=10, R=35):
         gui.show()
     setZ(sz)
     return beads
+
+def Track(beads, T, getImg, R=35):
+    img = getImg()
+    W = len(img[0])
+    H = len(img)
+    gui = ti.GUI('Tracking', (W, H))
+    cot = 0
+    trace = []
+    for i in range(len(beads)):
+        trace.append([])
+    while gui.running:
+        img = getImg()
+        T.XYZ(beads, [img])
+        cot += 1
+        gui.set_image(np.flip(np.transpose(img), axis=1))
+        gui.text("cot = " + str(cot), [0.01, 0.05], color=0x0000ff)
+        for j in range(len(beads)):
+            b = beads[j]
+            trace[j].append([b.x, b.y, b.z])
+            gui.rect([(b.x-R)/W, 1 - (b.y-R)/H], [(b.x+R)/W, 1 - (b.y+R)/H], color=0xff0000)
+            gui.circle([b.x/W, 1 - b.y/H], color=0xff0000)
+            gui.text(str(j), [(b.x-R)/W, 1 - (b.y-R)/H], color=0xff0000)
+        gui.show()
+    return trace

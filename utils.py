@@ -33,7 +33,7 @@ def PlotCalibration(bead):
     ax2.imshow(np.flip(bead.Φc, axis=0))
     plt.show()
 
-def PlotXY(trace, s=1):
+def PlotXY(trace, s=1, show=True):
     t = np.transpose(np.array(trace))
     x = t[0] - np.mean(t[0])
     y = t[1] - np.mean(t[1])
@@ -45,4 +45,10 @@ def PlotXY(trace, s=1):
     plt.ylabel("Y(px) %.2f" % np.mean(t[1]))
     plt.title("XY Scatter")
     plt.grid()
-    plt.show()
+    if show:
+        plt.show()
+    return x, y
+
+def TraceAxis(trace, axis=2):
+    t = np.transpose(np.array(trace))
+    return t[axis]
