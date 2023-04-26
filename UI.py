@@ -65,7 +65,7 @@ def Calibrate(beads, T, getImg, getZ, setZ, Nz=100, step=100, m=10, R=35):
     setZ(sz)
     return beads
 
-def Track(beads, T, getImg, R=35):
+def Track(beads, T, getImg, maxCot=-1, R=35):
     img = getImg()
     W = len(img[0])
     H = len(img)
@@ -86,5 +86,7 @@ def Track(beads, T, getImg, R=35):
             gui.rect([(b.x-R)/W, 1 - (b.y-R)/H], [(b.x+R)/W, 1 - (b.y+R)/H], color=0xff0000)
             gui.circle([b.x/W, 1 - b.y/H], color=0xff0000)
             gui.text(str(j), [(b.x-R)/W, 1 - (b.y-R)/H], color=0xff0000)
+        if maxCot > 0 and cot >= maxCot:
+            return trace
         gui.show()
     return trace
