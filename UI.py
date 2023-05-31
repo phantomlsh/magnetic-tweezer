@@ -89,4 +89,4 @@ def Track(beads, T, getImg, maxCot=-1, R=35):
         if maxCot > 0 and cot >= maxCot:
             return trace
         gui.show()
-    return trace
+    return np.array(trace)

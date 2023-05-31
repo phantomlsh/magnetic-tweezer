@@ -19,6 +19,7 @@ ts = []
 start = time.time()
 for loop in range(1000):
     img = mm.Get()
+    time.sleep(0.02)
     ts.append(time.time() - start)
     T.XY(beads, [img])
     for i in range(n):
@@ -27,4 +28,7 @@ for loop in range(1000):
 
 traces = np.array(traces)
 print('time:', time.time() - start)
-utils.PlotXY(traces[0] - traces[1])
+Δt = traces[0] - traces[1]
+print("X STD =", np.std(utils.TraceAxis(Δt, 0)))
+print("Y STD =", np.std(utils.TraceAxis(Δt, 1)))
+utils.PlotXY(Δt)

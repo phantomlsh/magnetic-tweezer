@@ -1,30 +1,35 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time, mm, utils
-import cv2 as cv
-import T as T
+import N as T
+import UI
 
-zcs = np.arange(0, 10000, 100)
-beads = [T.Bead(484, 422)]
-n = len(beads)
+z0 = mm.GetZ()
 
-sz = mm.GetZ()
-T.XY(beads, [mm.Get()])
+beads = UI.SelectBeads(T, mm.Get)
 
-# calibrate
-for i in range(len(zcs)):
-    z = zcs[i]
-    imgc = []
-    mm.SetZ(z + sz)
-    time.sleep(0.2)
-    for t in range(10):
-        imgc.append(mm.Get())
-        time.sleep(0.02)
-    T.Calibrate(beads, imgc, z + sz)
+UI.Calibrate(beads, T, mm.Get, mm.GetZ, mm.SetZ)
 
-mm.SetZ(sz)
+for i in range(5, len(beads)):
+    beads[i].rf = 14 # reference beads
 T.ComputeCalibration(beads)
 
+for i in range(len(beads)):
+    utils.PlotCalibration(beads[i])
+
+δz = 4000
+mm.SetZ(z0 + δz)
+
+trace = UI.Track(beads, T, mm.Get, 500)
+Δt = trace[0] - trace[1]
+utils.PlotXY(Δt)
+plt.plot(utils.TraceAxis(Δt))
+plt.xlabel("Z(nm)")
+plt.title("Z Position")
+plt.grid()
+plt.show()
+
+"""
 # test
 zts = np.arange(500, 9500, 50)
 z0s = []
@@ -56,3 +61,4 @@ plt.ylabel('Bias(nm)')
 plt.show()
 
 mm.SetZ(sz)
+"""
