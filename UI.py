@@ -87,6 +87,6 @@ def Track(beads, T, getImg, maxCot=-1, R=35):
             gui.circle([b.x/W, 1 - b.y/H], color=0xff0000)
             gui.text(str(j), [(b.x-R)/W, 1 - (b.y-R)/H], color=0xff0000)
         if maxCot > 0 and cot >= maxCot:
-            return trace
+            return np.array(trace)
         gui.show()
     return np.array(trace)
