@@ -1,5 +1,7 @@
 # magnetic-tweezer
 
+A Python library to track beads in magnetic tweezer experiments
+
 ## Get started
 
 ```python
