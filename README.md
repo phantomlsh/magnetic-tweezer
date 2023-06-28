@@ -67,3 +67,25 @@ print(res)
 ]
 """
 ```
+
+## Directory
+
+```python
+# acs.py: control magnetic motor
+acs.To(30) # unit in mm
+
+# mm.py: mi(py)cromanager interface
+mm.Get() # get last image
+mm.GetZ() # get piezo position in nm
+mm.SetZ(1000) # set piezo position in nm
+
+# N.py: CPU version tracking with NumPy
+# T.py: GPU version tracking with Taichi
+
+# UI.py: useful UI utilities with Taichi
+beads = UI.SelectBeads(T, mm.Get, R=35) # select beads with mouse clicking
+UI.Calibrate(beads, T, mm.Get, mm.GetZ, mm.SetZ, Nz=100, step=100, m=10, R=35) # automatic calibration with UI for observation
+UI.Track(beads, T, mm.Get, maxCot=-1, R=35) # track beads with UI for observation, LOW performance!
+
+# utils.py: useful utilities in image processing and plotting
+```
