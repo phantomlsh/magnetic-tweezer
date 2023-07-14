@@ -3,7 +3,7 @@ from scipy import signal
 import cv2 as cv
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-import statistics
+
 # Normalize to [-1, 1]
 def NormalizeArray(array):
     return 2 * array / np.max(array) - 1
