@@ -70,6 +70,17 @@ def PlotXY(trace, s=1, show=True):
     ax_x.set_ylabel("Count")
     if show:
         plt.show()
+def PlotX(trace):
+    t = np.transpose(np.array(trace))
+    x = t[0] - np.mean(t[0])
+    plt.plot(x)
+    mean_value = np.mean(t[0])
+    std_value = np.std(t[0])
+    label_text = "X(px) Mean: %.2f, Std Deviation: %.2f" % (mean_value, std_value)
+    plt.xlabel('500 times with FPS about 25')
+    plt.ylabel(label_text)
+    plt.title('X Position')
+    plt.show()
 
 def TraceAxis(trace, axis=2):
     t = np.transpose(np.array(trace))
