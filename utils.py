@@ -64,7 +64,7 @@ def PlotXY(trace, s=1, show=True):
     ax.set_xlabel(label_text)
     mean_valu = np.mean(t[1])
     std_valu = np.std(t[1])
-    label_tex = "Y(px) Mean: %.2f nm, Std Deviation: %.2f nm" % (mean_value * 166, std_value * 166)
+    label_tex = "Y(px) Mean: %.2f nm, Std Deviation: %.2f nm" % (mean_valu * 166, std_valu * 166)
     ax.set_ylabel(label_tex)
     ax_y.set_xlabel("Count")
     ax_x.set_ylabel("Count")
