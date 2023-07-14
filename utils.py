@@ -3,7 +3,7 @@ from scipy import signal
 import cv2 as cv
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-
+import statistics
 # Normalize to [-1, 1]
 def NormalizeArray(array):
     return 2 * array / np.max(array) - 1
@@ -58,7 +58,7 @@ def PlotXY(trace, s=1, show=True):
     ax_y.hist(y, bins=30, orientation="horizontal")
     plt.setp(ax_x.get_xticklabels(), visible=False)
     plt.setp(ax_y.get_yticklabels(), visible=False)
-    ax.set_xlabel("X(px) %.2f" % np.mean(t[0]))
+    ax.set_xlabel("X(px) %.2f" % np.mean(t[0]),statistics.variance(t[0]))
     ax.set_ylabel("Y(px) %.2f" % np.mean(t[1]))
     ax_y.set_xlabel("Count")
     ax_x.set_ylabel("Count")
