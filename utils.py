@@ -80,6 +80,7 @@ def PlotX(trace):
     plt.xlabel('500 times with FPS about 25')
     plt.ylabel(label_text)
     plt.title('X Position')
+    plt.grid()
     plt.show()
 def PlotY(trace):
     t = np.transpose(np.array(trace))
@@ -91,6 +92,7 @@ def PlotY(trace):
     plt.xlabel('500 times with FPS about 25')
     plt.ylabel(label_text)
     plt.title('Y Position')
+    plt.grid()
     plt.show()
 def TraceAxis(trace, axis=2):
     t = np.transpose(np.array(trace))
