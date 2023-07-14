@@ -60,11 +60,11 @@ def PlotXY(trace, s=1, show=True):
     plt.setp(ax_y.get_yticklabels(), visible=False)
     mean_value = np.mean(t[0])
     std_value = np.std(t[0])
-    label_text = "X(nm) Mean: %.2f, Std Deviation: %.2f" % (mean_value * 166, std_value * 166)
+    label_text = "X(px) Mean: %.2f nm, Std Deviation: %.2f nm" % (mean_value * 166, std_value * 166)
     ax.set_xlabel(label_text)
     mean_valu = np.mean(t[1])
     std_valu = np.std(t[1])
-    label_tex = "Y(nm) Mean: %.2f, Std Deviation: %.2f" % (mean_value * 166, std_value * 166)
+    label_tex = "Y(px) Mean: %.2f nm, Std Deviation: %.2f nm" % (mean_value * 166, std_value * 166)
     ax.set_ylabel(label_tex)
     ax_y.set_xlabel("Count")
     ax_x.set_ylabel("Count")
@@ -72,7 +72,7 @@ def PlotXY(trace, s=1, show=True):
         plt.show()
 def PlotX(trace):
     t = np.transpose(np.array(trace))
-    x = t[0] - np.mean(t[0])
+    x = t[0]
     plt.plot(x)
     mean_value = np.mean(t[0])
     std_value = np.std(t[0])
@@ -81,7 +81,17 @@ def PlotX(trace):
     plt.ylabel(label_text)
     plt.title('X Position')
     plt.show()
-
+def PlotY(trace):
+    t = np.transpose(np.array(trace))
+    y = t[1]
+    plt.plot(y)
+    mean_value = np.mean(t[1])
+    std_value = np.std(t[1])
+    label_text = "Y(px) Mean: %.2f, Std Deviation: %.2f" % (mean_value, std_value)
+    plt.xlabel('500 times with FPS about 25')
+    plt.ylabel(label_text)
+    plt.title('Y Position')
+    plt.show()
 def TraceAxis(trace, axis=2):
     t = np.transpose(np.array(trace))
     return t[axis]
