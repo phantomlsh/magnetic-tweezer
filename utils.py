@@ -58,8 +58,11 @@ def PlotXY(trace, s=1, show=True):
     ax_y.hist(y, bins=30, orientation="horizontal")
     plt.setp(ax_x.get_xticklabels(), visible=False)
     plt.setp(ax_y.get_yticklabels(), visible=False)
-    ax.set_xlabel("X(px) %.2f" % (np.mean(t[0]) * 166))
-    ax.set_ylabel("Y(px) %.2f" % np.mean(t[1]))
+    mean_value = np.mean(t[0])
+    std_value = np.std(t[0])
+    label_text = "X(px) Mean: %.2f, Std Deviation: %.2f" % (mean_value * 166, std_value * 166)
+    ax.set_xlabel(label_text)
+    ax.set_ylabel("Y(nm) %.2f" % (np.mean(t[1]) * 166))
     ax_y.set_xlabel("Count")
     ax_x.set_ylabel("Count")
     if show:
