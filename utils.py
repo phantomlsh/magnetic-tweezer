@@ -97,3 +97,6 @@ def PlotY(trace):
 def TraceAxis(trace, axis=2):
     t = np.transpose(np.array(trace))
     return t[axis]
+def TAthreetofour(trace, axis=2):
+    t = np.transpose(np.array(trace))
+    return t[axis][299:399]
