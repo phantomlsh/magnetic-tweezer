@@ -31,7 +31,7 @@ def SelectBeads(T, getImg, R=35):
     return beads
 
 # WITHOUT ComputeCalibration!
-def Calibrate(beads, T, getImg, getZ, setZ, Nz=200, step=100, m=10, R=35):
+def Calibrate(beads, T, getImg, getZ, setZ, Nz=150, step=100, m=10, R=35):
     img = getImg()
     W = len(img[0])
     H = len(img)
