@@ -80,9 +80,21 @@ def _fitZero(x1: ti.f32, x2: ti.f32, x3: ti.f32, x4: ti.f32, x5: ti.f32, y1: ti.
 
 @ti.func
 def _cX(ζ: ti.i32, d: ti.i32): # d = 0(X)|1(Y)
-    # correlate
     for μ, k in ti.ndrange(ζ, 50):
         _cx[μ, k] = 0
+    # normalize
+    for μ, l in ti.ndrange(ζ, L): # mean
+        _cx[μ, 0] += _x[μ, l] / L
+    for μ, l in ti.ndrange(ζ, L): # std
+        _cx[μ, 1] += (_x[μ, l] - _cx[μ, 0]) ** 2 / L
+    for μ in ti.ndrange(ζ):
+        _cx[μ, 1] = ti.sqrt(_cx[μ, 1])
+    for μ, l in ti.ndrange(ζ, L):
+        _x[μ, l] = (_x[μ, l] - _cx[μ, 0]) / _cx[μ, 1]
+    # correlate
+    for μ in ti.ndrange(ζ):
+        _cx[μ, 0] = 0
+        _cx[μ, 1] = 0
     for μ, k, l in ti.ndrange(ζ, 50, L):
         m = k - l + L - 26
         if m > 0 and m < L:
@@ -92,7 +104,7 @@ def _cX(ζ: ti.i32, d: ti.i32): # d = 0(X)|1(Y)
         for t in range(50):
             if _cx[μ, t] > _cx[μ, x]:
                 x = t
-        _p[μ, d] += (x - 25.5 + _fitCenter(_cx[μ, x-2], _cx[μ, x-1], _cx[μ, x], _cx[μ, x+1], _cx[μ, x+2])) / 2
+        _p[μ, d] += (x - 25 + _fitCenter(_cx[μ, x-2], _cx[μ, x-1], _cx[μ, x], _cx[μ, x+1], _cx[μ, x+2])) / 2
 
 @ti.func
 def _XY(ζ: ti.i32):
@@ -111,6 +123,18 @@ def _profile(ζ: ti.i32):
         x = R+5 + _p[μ, 0] + Fr * r * ti.cos(θ * Fθ)
         y = R+5 + _p[μ, 1] + Fr * r * ti.sin(θ * Fθ)
         _I[μ, r] += _BI(μ, x, y) / Nθ
+    # normalize
+    for μ in ti.ndrange(ζ):
+        _cx[μ, 0] = 0 # mean
+        _cx[μ, 1] = 0 # std
+    for μ, r in ti.ndrange(ζ, Nr):
+        _cx[μ, 0] += _I[μ, r] / Nr
+    for μ, r in ti.ndrange(ζ, Nr):
+        _cx[μ, 1] += (_I[μ, r] - _cx[μ, 0]) ** 2 / Nr
+    for μ in ti.ndrange(ζ):
+        _cx[μ, 1] = ti.sqrt(_cx[μ, 1])
+    for μ, r in ti.ndrange(ζ, Nr):
+        _I[μ, r] = (_I[μ, r] - _cx[μ, 0]) / _cx[μ, 1]
 
 @ti.func
 def _tilde(n: ti.i32, m: ti.i32):

@@ -25,6 +25,7 @@ SetParams()
 
 # shift from the center
 def centerShift(array, it=2):
+    array = (array - np.mean(array)) / np.std(array)
     fft = np.fft.rfft(np.append(array, np.zeros(L)))
     res = 0
     d = 0
@@ -52,6 +53,7 @@ def bilinearInterpolate(im, x, y):
 def profile(beads, img):
     for b in beads:
         b.profile = np.average(bilinearInterpolate(img, sxs + b.x, sys + b.y).reshape((Nθ, Nr)), axis=0)
+        b.profile = (b.profile - np.mean(b.profile)) / np.std(b.profile)
 
 def tilde(I, rf, w):
     I = np.append(np.flip(I), I)
