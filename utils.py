@@ -1,5 +1,4 @@
 import numpy as np
-from scipy import signal
 import cv2 as cv
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
