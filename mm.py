@@ -5,13 +5,12 @@ for image and Z position
 2022.07.06 Phantomlsh
 """
 
-from pycromanager import Bridge
+from pycromanager import Core
 import atexit
 import numpy as np
 import time
 
-bridge = Bridge()
-core = bridge.get_core()
+core = Core()
 core.get_version_info()
 
 # Snap an image to get height and width
