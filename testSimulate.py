@@ -6,15 +6,16 @@ import N as N
 from math import sqrt, cos, floor, pi as π
 import random
 
+
 def Generate(X, Y, Z, λ, img):
-  L = 100
-  for x in range(X-L, X+L):
-    for y in range(Y-L, Y+L):
-      r = sqrt((x-X)**2 + (y-Y)**2 + Z**2)
-      n = (r-Z)/λ
-      ϕ = 2*π*(n - floor(n) - 0.5)
-      img[y][x] = 5e5 * cos(ϕ/2) * Z**2 / (r**4)
-      #img[y][x] = floor(5e5 * cos(ϕ/2) * Z**2 / (r**4) * random.uniform(1, 1.1))
+    L = 100
+    for x in range(X - L, X + L):
+        for y in range(Y - L, Y + L):
+            r = sqrt((x - X) ** 2 + (y - Y) ** 2 + Z**2)
+            n = (r - Z) / λ
+            ϕ = 2 * π * (n - floor(n) - 0.5)
+            img[y][x] = 5e5 * cos(ϕ / 2) * Z**2 / (r**4)
+            # img[y][x] = floor(5e5 * cos(ϕ/2) * Z**2 / (r**4) * random.uniform(1, 1.1))
 
 
 shape = (700, 756)
@@ -29,7 +30,7 @@ Generate(50, 50, 60, 4, img)
 maxn = 20
 loopRange = range(1, maxn)
 
-if (True):
+if True:
     ts = []
     for loop in loopRange:
         beads = []
@@ -53,7 +54,7 @@ if (True):
     plt.plot(loopRange, np.array(ts), marker="o", label="Taichi")
     print(np.polynomial.polynomial.polyfit(loopRange[1:], ts[1:], 1))
 
-if (True):
+if True:
     ts = []
     for loop in loopRange:
         beads = []

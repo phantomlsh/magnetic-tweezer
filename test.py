@@ -12,7 +12,7 @@ beads = UI.SelectBeads(T, mm.Get)
 UI.Calibrate(beads, T, mm.Get, mm.GetZ, mm.SetZ)
 
 for i in range(1, len(beads)):
-    beads[i].rf = 14 # reference beads
+    beads[i].rf = 14  # reference beads
 T.ComputeCalibration(beads)
 
 for i in range(len(beads)):
@@ -51,7 +51,7 @@ for h in range(len(data)):
 allTrace = np.array(allTrace)
 acs.To(39)
 
-plt.plot((allTrace[:,2] - allTrace[:,5])[:])
+plt.plot((allTrace[:, 2] - allTrace[:, 5])[:])
 plt.show()
 
 f = open("./data/trace3.dat", "w")
