@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import T as T
 import N as N
 from math import sqrt, cos, floor, pi as π
-import random
 
 
 def Generate(X, Y, Z, λ, img):
