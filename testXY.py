@@ -1,5 +1,7 @@
 import numpy as np
-import time, mm, utils
+import time
+import mm
+import utils
 import T as T
 import UI
 
@@ -26,7 +28,7 @@ for loop in range(1000):
         traces[i].append([b.x, b.y])
 
 traces = np.array(traces)
-print('time:', time.time() - start)
+print("time:", time.time() - start)
 Δt = traces[0] - traces[1]
 print("X STD =", np.std(utils.TraceAxis(Δt, 0)))
 print("Y STD =", np.std(utils.TraceAxis(Δt, 1)))
