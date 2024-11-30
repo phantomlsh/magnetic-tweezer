@@ -24,21 +24,29 @@ print("Acquisition Size: Width =", Width, " Height =", Height)
 core.start_continuous_sequence_acquisition(1)
 time.sleep(1)
 
+
 def exit_handler():
     core.stop_sequence_acquisition()
     print("Mi(Py)croManager Exiting...")
 
+
 atexit.register(exit_handler)
+
 
 # Acquire image
 def Get():
     image = core.get_last_image()
     return np.reshape(image, (Height, Width))
 
+
 def GetZ():
-    return float(core.get_property("MCL NanoDrive Z Stage", "Set position Z (um)")) * 1000
+    return (
+        float(core.get_property("MCL NanoDrive Z Stage", "Set position Z (um)")) * 1000
+    )
+
 
 print("Z =", GetZ())
+
 
 def SetZ(z):
     core.set_property("MCL NanoDrive Z Stage", "Set position Z (um)", z / 1000)
